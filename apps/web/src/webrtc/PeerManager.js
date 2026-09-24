@@ -1,19 +1,32 @@
 /**
  * PeerManager (TRD Section 7.1, 7.2, 9)
- * Manages RTCPeerConnection and the "control" DataChannel for manifest handshake
+ * Manages RTCPeerConnection and the "control", "data", and "text" DataChannels.
  */
 export class PeerManager {
-  constructor({ peerId, role, iceServers, signalingClient, onManifest, onStateChange }) {
+  constructor({
+    peerId,
+    role,
+    iceServers,
+    signalingClient,
+    onManifest,
+    onControlMessage,
+    onStateChange,
+    onChannelsReady,
+  }) {
     this.peerId = peerId; // receiverId or 'sender'
     this.role = role; // 'sender' | 'receiver'
     this.iceServers = iceServers || [{ urls: 'stun:stun.l.google.com:19302' }];
     this.signalingClient = signalingClient;
     this.onManifest = onManifest;
+    this.onControlMessage = onControlMessage;
     this.onStateChange = onStateChange;
+    this.onChannelsReady = onChannelsReady;
 
     this.pc = null;
     this.controlChannel = null;
-    this.state = 'CONNECTING'; // 'CONNECTING' | 'WAITING_ACCEPT' | 'ACCEPTED' | 'DECLINED' | 'FAILED' | 'CLOSED'
+    this.dataChannel = null;
+    this.textChannel = null;
+    this.state = 'CONNECTING'; // 'CONNECTING' | 'WAITING_ACCEPT' | 'ACCEPTED' | 'TRANSFERRING' | 'DONE' | 'DECLINED' | 'FAILED' | 'CLOSED'
   }
 
   setState(newState, details = null) {
@@ -46,20 +59,50 @@ export class PeerManager {
     };
 
     if (this.role === 'sender') {
-      // Sender creates control channel
+      // Sender creates control, data, and text channels
       this.controlChannel = this.pc.createDataChannel('control', { ordered: true });
+      this.dataChannel = this.pc.createDataChannel('data', { ordered: true });
+      this.dataChannel.binaryType = 'arraybuffer';
+      this.textChannel = this.pc.createDataChannel('text', { ordered: true });
+      this.textChannel.binaryType = 'arraybuffer';
+
       this.setupControlChannel(this.controlChannel, manifestToSend);
+
+      if (this.onChannelsReady) {
+        this.onChannelsReady({
+          controlChannel: this.controlChannel,
+          dataChannel: this.dataChannel,
+          textChannel: this.textChannel,
+        });
+      }
 
       // Create and send offer
       const offer = await this.pc.createOffer();
       await this.pc.setLocalDescription(offer);
       this.signalingClient.sendSignal('signal.offer', this.peerId, offer);
     } else {
-      // Receiver listens for incoming control data channel
+      // Receiver listens for incoming data channels
       this.pc.ondatachannel = (event) => {
-        if (event.channel.label === 'control') {
+        const { label } = event.channel;
+        if (label === 'control') {
           this.controlChannel = event.channel;
           this.setupControlChannel(this.controlChannel, null);
+        } else if (label === 'data') {
+          this.dataChannel = event.channel;
+          this.dataChannel.binaryType = 'arraybuffer';
+        } else if (label === 'text') {
+          this.textChannel = event.channel;
+          this.textChannel.binaryType = 'arraybuffer';
+        }
+
+        if (this.controlChannel && (this.dataChannel || this.textChannel)) {
+          if (this.onChannelsReady) {
+            this.onChannelsReady({
+              controlChannel: this.controlChannel,
+              dataChannel: this.dataChannel,
+              textChannel: this.textChannel,
+            });
+          }
         }
       };
     }
@@ -91,6 +134,11 @@ export class PeerManager {
     channel.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+
+        if (this.onControlMessage) {
+          this.onControlMessage(data);
+        }
+
         if (data.type === 'manifest') {
           this.setState('WAITING_ACCEPT', data);
           if (this.onManifest) {
@@ -100,6 +148,10 @@ export class PeerManager {
           this.setState('ACCEPTED');
         } else if (data.type === 'decline') {
           this.setState('DECLINED');
+        } else if (data.type === 'cancel') {
+          this.setState('FAILED', 'Transfer cancelled by peer');
+        } else if (data.type === 'complete') {
+          this.setState('DONE');
         }
       } catch (err) {
         console.error('[PeerManager] Error parsing control channel message:', err);
@@ -107,7 +159,7 @@ export class PeerManager {
     };
 
     channel.onclose = () => {
-      if (this.state !== 'DECLINED' && this.state !== 'ACCEPTED') {
+      if (this.state !== 'DECLINED' && this.state !== 'ACCEPTED' && this.state !== 'DONE') {
         this.setState('CLOSED');
       }
     };
@@ -163,6 +215,14 @@ export class PeerManager {
     if (this.controlChannel) {
       try { this.controlChannel.close(); } catch { /* ignore */ }
       this.controlChannel = null;
+    }
+    if (this.dataChannel) {
+      try { this.dataChannel.close(); } catch { /* ignore */ }
+      this.dataChannel = null;
+    }
+    if (this.textChannel) {
+      try { this.textChannel.close(); } catch { /* ignore */ }
+      this.textChannel = null;
     }
     if (this.pc) {
       try { this.pc.close(); } catch { /* ignore */ }

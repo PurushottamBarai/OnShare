@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { SignalingClient } from '../signaling/SignalingClient.js';
 import { PeerManager } from '../webrtc/PeerManager.js';
 import { generateDeviceLabel } from '../utils/deviceLabel.js';
+import { SenderPipeline, generateZipFilename } from '../transfer/senderPipeline.js';
 import StatusPill from '../components/StatusPill.jsx';
 import DeviceLabelChip from '../components/DeviceLabelChip.jsx';
 import LockoutBanner from '../components/LockoutBanner.jsx';
@@ -29,6 +30,7 @@ export default function Send() {
 
   const signalingRef = useRef(null);
   const peerManagersRef = useRef(new Map()); // receiverId -> PeerManager
+  const senderPipelinesRef = useRef(new Map()); // receiverId -> SenderPipeline
   const fileInputRef = useRef(null);
   const filesRef = useRef(files);
 
@@ -56,15 +58,19 @@ export default function Send() {
       // Add receiver to UI list
       setReceivers(prev => {
         if (prev.some(r => r.id === receiverId)) return prev;
-        return [...prev, { id: receiverId, label: `Receiver (${receiverId.slice(-4)})`, status: 'waiting' }];
+        return [...prev, { id: receiverId, label: `Receiver (${receiverId.slice(-4)})`, status: 'waiting', progress: 0 }];
       });
 
       // Initialize WebRTC PeerManager for this receiver using current files ref
       const currentFiles = filesRef.current;
+      const isMultiFile = currentFiles.length > 1;
       const manifest = {
         transferId: `transfer_${Date.now()}`,
+        mode: 'files',
         senderLabel: deviceLabel,
-        totalSize: currentFiles.reduce((acc, f) => acc + f.size, 0),
+        totalSize: currentFiles.reduce((acc, f) => acc + (f.size || 0), 0),
+        zip: isMultiFile,
+        zipFilename: isMultiFile ? generateZipFilename() : undefined,
         files: currentFiles.map(f => ({ name: f.name, size: f.size, type: f.type })),
       };
 
@@ -73,13 +79,38 @@ export default function Send() {
         role: 'sender',
         iceServers: client.iceServers,
         signalingClient: client,
+        onControlMessage: (data) => {
+          if (data.type === 'complete') {
+            setReceivers(prev => prev.map(r => r.id === receiverId ? { ...r, status: 'done', progress: 100 } : r));
+          }
+        },
         onStateChange: (state) => {
           setReceivers(prev => prev.map(r => {
             if (r.id !== receiverId) return r;
             if (state === 'WAITING_ACCEPT') return { ...r, status: 'waiting' };
-            if (state === 'ACCEPTED') return { ...r, status: 'sending' };
+            if (state === 'ACCEPTED') {
+              // Start streaming file pipeline to this receiver
+              const pipeline = new SenderPipeline({
+                dataChannel: pm.dataChannel,
+                controlChannel: pm.controlChannel,
+                files: currentFiles,
+                onProgress: (p) => {
+                  setReceivers(curr => curr.map(item => item.id === receiverId ? { ...item, status: 'sending', progress: p.percent } : item));
+                },
+                onComplete: () => {
+                  setReceivers(curr => curr.map(item => item.id === receiverId ? { ...item, status: 'done', progress: 100 } : item));
+                },
+                onError: () => {
+                  setReceivers(curr => curr.map(item => item.id === receiverId ? { ...item, status: 'failed' } : item));
+                },
+              });
+              senderPipelinesRef.current.set(receiverId, pipeline);
+              pipeline.start();
+              return { ...r, status: 'sending', progress: 0 };
+            }
             if (state === 'DECLINED') return { ...r, status: 'declined' };
             if (state === 'FAILED') return { ...r, status: 'failed' };
+            if (state === 'DONE') return { ...r, status: 'done', progress: 100 };
             return r;
           }));
         },
@@ -159,8 +190,11 @@ export default function Send() {
   useEffect(() => {
     ensureSession();
     const pms = peerManagersRef.current;
+    const pipes = senderPipelinesRef.current;
     const sig = signalingRef.current;
     return () => {
+      pipes.forEach(p => p.cancel());
+      pipes.clear();
       pms.forEach(pm => pm.close());
       pms.clear();
       sig?.close();
@@ -201,6 +235,8 @@ export default function Send() {
 
   // Removing receiver (SN-7)
   const handleRemoveReceiver = (receiverId) => {
+    senderPipelinesRef.current.get(receiverId)?.cancel();
+    senderPipelinesRef.current.delete(receiverId);
     signalingRef.current?.removeReceiver(receiverId);
     peerManagersRef.current.get(receiverId)?.close();
     peerManagersRef.current.delete(receiverId);
@@ -209,6 +245,8 @@ export default function Send() {
 
   // End session (SN-7)
   const handleEndSession = () => {
+    senderPipelinesRef.current.forEach(p => p.cancel());
+    senderPipelinesRef.current.clear();
     signalingRef.current?.endSession();
     peerManagersRef.current.forEach(pm => pm.close());
     peerManagersRef.current.clear();
@@ -416,7 +454,7 @@ export default function Send() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <StatusPill status={r.status} />
+                  <StatusPill status={r.status} progress={r.progress} />
                   <button
                     onClick={() => handleRemoveReceiver(r.id)}
                     className="w-6 h-6 rounded flex items-center justify-center text-text-secondary hover:text-status-error hover:bg-bg-base cursor-pointer"

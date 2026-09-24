@@ -87,8 +87,8 @@ test.describe('Part 3 Handshake: Two-tab Receiver and Sender connection', () => 
     // Receiver reaches accepted screen
     await expect(receiverPage.locator('[data-testid="receive-accepted-screen"]')).toBeVisible({ timeout: 5000 });
 
-    // Sender's status updates to sending / accepted
-    await expect(senderPage.locator('[data-testid="status-pill-sending"]')).toBeVisible({ timeout: 5000 });
+    // Sender's status updates to sending or done
+    await expect(senderPage.locator('[data-testid="status-pill-sending"], [data-testid="status-pill-done"]')).toBeVisible({ timeout: 5000 });
 
     await receiverContext.close();
     await senderContext.close();
