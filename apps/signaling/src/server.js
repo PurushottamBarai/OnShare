@@ -1,0 +1,213 @@
+import http from 'node:http';
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { WebSocketServer, WebSocket } from 'ws';
+import worker, { OtpRoom, Session, Limiter } from './index.js';
+
+class SafeMessageEvent extends Event {
+  constructor(type, init = {}) {
+    super(type);
+    this.data = init.data;
+  }
+}
+const MessageEventImpl = typeof MessageEvent !== 'undefined' ? MessageEvent : SafeMessageEvent;
+
+class SafeCloseEvent extends Event {
+  constructor(type, init = {}) {
+    super(type);
+    this.code = init.code || 1000;
+    this.reason = init.reason || '';
+  }
+}
+const CloseEventImpl = typeof CloseEvent !== 'undefined' ? CloseEvent : SafeCloseEvent;
+
+const socketStorage = new AsyncLocalStorage();
+
+/**
+ * Node.js Standalone Signaling Server (TRD Section 5.2 fallback)
+ * Runs the exact same Durable Object logic in-memory with the ws library.
+ */
+class InMemoryDONamespace {
+  constructor(ClassConstructor, env) {
+    this.ClassConstructor = ClassConstructor;
+    this.instances = new Map();
+    this.env = env;
+  }
+
+  idFromName(name) {
+    return { name, toString: () => name };
+  }
+
+  get(id) {
+    const key = id.name || id.toString();
+    if (!this.instances.has(key)) {
+      const state = { id, storage: new Map() };
+      this.instances.set(key, new this.ClassConstructor(state, this.env));
+    }
+    const instance = this.instances.get(key);
+    return {
+      fetch: (req) => instance.fetch(req),
+      instance,
+    };
+  }
+}
+
+class InternalSocket extends EventTarget {
+  constructor() {
+    super();
+    this.readyState = 1; // OPEN
+    this.peer = null;
+  }
+
+  send(data) {
+    if (!this.peer) return;
+    if (this.peer.readyState === WebSocket.OPEN) {
+      try {
+        this.peer.send(data);
+      } catch {
+        // ignore send error on closing socket
+      }
+    } else if (this.peer.readyState === WebSocket.CONNECTING) {
+      this.peer.once('open', () => {
+        try {
+          this.peer.send(data);
+        } catch {
+          // ignore
+        }
+      });
+    }
+  }
+
+  close(code = 1000, reason = '') {
+    this.readyState = 3;
+    if (this.peer && this.peer.readyState === WebSocket.OPEN) {
+      try {
+        this.peer.close(code, reason);
+      } catch {
+        // ignore
+      }
+    }
+    this.dispatchEvent(new CloseEventImpl('close', { code, reason }));
+  }
+}
+
+export function createServer(port = 8787) {
+  const env = {
+    TURN_SECRET: process.env.TURN_SECRET || 'shareport-dev-turn-secret',
+    TURN_DOMAIN: process.env.TURN_DOMAIN || 'turn.shareport.net',
+    createWebSocketPair: () => {
+      const store = socketStorage.getStore();
+      if (store?.serverSide) {
+        return [store.serverSide, store.serverSide];
+      }
+      throw new Error('createWebSocketPair called outside of socketStorage context');
+    },
+  };
+
+  env.OTP_ROOM = new InMemoryDONamespace(OtpRoom, env);
+  env.SESSION = new InMemoryDONamespace(Session, env);
+  env.LIMITER = new InMemoryDONamespace(Limiter, env);
+
+  const server = http.createServer(async (req, res) => {
+    const protocol = req.headers['x-forwarded-proto'] || 'http';
+    const host = req.headers.host || `localhost:${port}`;
+    const url = new URL(req.url, `${protocol}://${host}`);
+
+    const headers = new Headers();
+    for (const [key, value] of Object.entries(req.headers)) {
+      if (value) {
+        if (Array.isArray(value)) {
+          value.forEach(v => headers.append(key, v));
+        } else {
+          headers.set(key, value);
+        }
+      }
+    }
+
+    const workerReq = new Request(url.toString(), {
+      method: req.method,
+      headers,
+    });
+
+    try {
+      const workerRes = await worker.fetch(workerReq, env);
+      res.statusCode = workerRes.status;
+      workerRes.headers.forEach((v, k) => {
+        res.setHeader(k, v);
+      });
+      const body = await workerRes.arrayBuffer();
+      res.end(Buffer.from(body));
+    } catch (err) {
+      res.statusCode = 500;
+      res.end(err.message || 'Internal Server Error');
+    }
+  });
+
+  const wss = new WebSocketServer({ noServer: true });
+
+  server.on('upgrade', async (req, socket, head) => {
+    wss.handleUpgrade(req, socket, head, (ws) => {
+      const protocol = req.headers['x-forwarded-proto'] || 'http';
+      const host = req.headers.host || `localhost:${port}`;
+      const url = new URL(req.url, `${protocol}://${host}`);
+
+      const headers = new Headers();
+      for (const [key, value] of Object.entries(req.headers)) {
+        if (value) {
+          if (Array.isArray(value)) {
+            value.forEach(v => headers.append(key, v));
+          } else {
+            headers.set(key, value);
+          }
+        }
+      }
+      headers.set('Upgrade', 'websocket');
+
+      const serverSide = new InternalSocket();
+      serverSide.peer = ws;
+
+      // When node ws receives message, forward to internal server socket
+      ws.on('message', (data) => {
+        const text = typeof data === 'string' ? data : data.toString();
+        serverSide.dispatchEvent(new MessageEventImpl('message', { data: text }));
+      });
+
+      ws.on('close', (code, reason) => {
+        serverSide.readyState = 3;
+        serverSide.dispatchEvent(new CloseEventImpl('close', { code, reason: reason?.toString() }));
+      });
+
+      ws.on('error', () => {
+        serverSide.readyState = 3;
+        serverSide.dispatchEvent(new CloseEventImpl('close', { code: 1006, reason: 'Abnormal Closure' }));
+      });
+
+      const workerReq = new Request(url.toString(), {
+        method: 'GET',
+        headers,
+      });
+
+      // Run worker.fetch within socketStorage context for this specific connection
+      socketStorage.run({ serverSide }, async () => {
+        try {
+          await worker.fetch(workerReq, env);
+        } catch (err) {
+          ws.close(1011, err.message);
+        }
+      });
+    });
+  });
+
+  return new Promise((resolve) => {
+    server.listen(port, '0.0.0.0', () => {
+      resolve(server);
+    });
+  });
+}
+
+// Auto-run when executed directly
+if (process.argv[1]?.endsWith('server.js')) {
+  const PORT = process.env.PORT || 8787;
+  createServer(PORT).then(() => {
+    console.info(`SharePort standalone signaling service running on http://localhost:${PORT}`);
+  });
+}

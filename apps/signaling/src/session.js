@@ -32,6 +32,9 @@ export class Session {
     this.validityMinutes = 60; // Default 60 minutes
     this.sessionTimeout = null;
     this.senderGraceTimeout = null;
+
+    // Buffer for early signaling messages (offers/ICE) arriving before receiver joins socket
+    this.pendingSignals = new Map(); // receiverId -> Array<{ type, payload, id }>
   }
 
   async fetch(request) {
@@ -65,12 +68,12 @@ export class Session {
 
     // Platform WebSocket pair creation
     let client, server;
-    if (typeof WebSocketPair !== 'undefined') {
-      const pair = new WebSocketPair();
+    if (this.env?.createWebSocketPair) {
+      const pair = this.env.createWebSocketPair();
       client = pair[0];
       server = pair[1];
-    } else if (this.env?.createWebSocketPair) {
-      const pair = this.env.createWebSocketPair();
+    } else if (typeof WebSocketPair !== 'undefined') {
+      const pair = new WebSocketPair();
       client = pair[0];
       server = pair[1];
     } else {
@@ -189,12 +192,25 @@ export class Session {
       case 'signal.ice': {
         const { to, payload } = msg.payload;
         const receiver = this.receivers.get(to);
-        if (receiver && receiver.socket) {
-          sendWsMessage(receiver.socket, msg.type, {
+        if (receiver) {
+          const signalPayload = {
             to,
             from: 'sender',
             payload,
-          }, msg.id);
+          };
+          if (receiver.socket) {
+            sendWsMessage(receiver.socket, msg.type, signalPayload, msg.id);
+          } else {
+            // Buffer early signal until receiver connects to /ws/join
+            if (!this.pendingSignals.has(to)) {
+              this.pendingSignals.set(to, []);
+            }
+            this.pendingSignals.get(to).push({
+              type: msg.type,
+              payload: signalPayload,
+              id: msg.id,
+            });
+          }
         } else {
           sendWsMessage(serverWs, 'error', {
             code: ERROR_CODES.PEER_UNREACHABLE,
@@ -365,6 +381,15 @@ export class Session {
     matchedEntry.socket = serverWs;
     matchedEntry.state = 'WAITING_ACCEPT';
 
+    // Flush any pending signals buffered for this receiver
+    const pending = this.pendingSignals.get(matchedReceiverId);
+    if (pending && pending.length > 0) {
+      for (const p of pending) {
+        sendWsMessage(serverWs, p.type, p.payload, p.id);
+      }
+      this.pendingSignals.delete(matchedReceiverId);
+    }
+
     serverWs.addEventListener('message', (event) => {
       try {
         const msg = parseAndValidateMessage(event.data);
@@ -450,5 +475,6 @@ export class Session {
       }
     }
     this.receivers.clear();
+    this.pendingSignals.clear();
   }
 }

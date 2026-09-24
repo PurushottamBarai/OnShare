@@ -35,28 +35,43 @@ export class OtpRoom {
       return Response.json({ available: isAvailable });
     }
 
+    if (url.pathname === '/expire') {
+      this.roomState = 'EXPIRED';
+      this.expiresAt = Date.now() - 1000;
+      if (this.receiverSocket) {
+        sendWsMessage(this.receiverSocket, 'error', {
+          code: ERROR_CODES.OTP_EXPIRED,
+          message: 'Code has expired',
+        });
+      }
+      return Response.json({ success: true, expired: true });
+    }
+
     // 2. Internal HTTP endpoint: Session consumes code
     if (url.pathname === '/consume') {
       const now = Date.now();
+
+      if (this.roomState === 'EXPIRED' || (this.expiresAt && now > this.expiresAt)) {
+        this.roomState = 'EXPIRED';
+        if (this.receiverSocket) {
+          sendWsMessage(this.receiverSocket, 'error', {
+            code: ERROR_CODES.OTP_EXPIRED,
+            message: 'Code has expired',
+          });
+        }
+        return Response.json({
+          success: false,
+          error: ERROR_CODES.OTP_EXPIRED,
+          message: 'Code has expired',
+        }, { status: 410 });
+      }
+
       if (this.roomState !== 'WAITING' || !this.receiverSocket) {
         return Response.json({
           success: false,
           error: ERROR_CODES.OTP_INVALID,
           message: 'Code is not active or has already been used',
         }, { status: 400 });
-      }
-
-      if (now > this.expiresAt) {
-        this.roomState = 'EXPIRED';
-        sendWsMessage(this.receiverSocket, 'error', {
-          code: ERROR_CODES.OTP_EXPIRED,
-          message: 'Code has expired',
-        });
-        return Response.json({
-          success: false,
-          error: ERROR_CODES.OTP_EXPIRED,
-          message: 'Code has expired',
-        }, { status: 410 });
       }
 
       const body = await request.json().catch(() => ({}));
@@ -108,12 +123,12 @@ export class OtpRoom {
 
     // Platform WebSocket pair creation
     let client, server;
-    if (typeof WebSocketPair !== 'undefined') {
-      const pair = new WebSocketPair();
+    if (this.env?.createWebSocketPair) {
+      const pair = this.env.createWebSocketPair();
       client = pair[0];
       server = pair[1];
-    } else if (this.env?.createWebSocketPair) {
-      const pair = this.env.createWebSocketPair();
+    } else if (typeof WebSocketPair !== 'undefined') {
+      const pair = new WebSocketPair();
       client = pair[0];
       server = pair[1];
     } else {

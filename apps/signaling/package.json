@@ -6,11 +6,13 @@
   "main": "./src/index.js",
   "scripts": {
     "dev": "wrangler dev",
+    "start": "node src/server.js",
     "deploy": "wrangler deploy",
     "test": "vitest run"
   },
   "dependencies": {
-    "@shareport/protocol": "*"
+    "@shareport/protocol": "*",
+    "ws": "^8.21.3"
   },
   "devDependencies": {
     "wrangler": "^3.90.0"

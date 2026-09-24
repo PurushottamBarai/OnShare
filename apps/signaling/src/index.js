@@ -25,6 +25,16 @@ export default {
         });
       }
 
+      // Testing helper: expire an active code
+      case '/test/expire-code': {
+        const code = url.searchParams.get('code');
+        if (!code || !env?.OTP_ROOM) {
+          return new Response('Missing code', { status: 400 });
+        }
+        const otpStub = env.OTP_ROOM.get(env.OTP_ROOM.idFromName(code));
+        return otpStub.fetch(new Request('http://internal/expire'));
+      }
+
       // 2. Receiver WebSocket connection (generates and binds 6-digit code)
       case '/ws/receiver': {
         if (request.headers.get('Upgrade') !== 'websocket') {

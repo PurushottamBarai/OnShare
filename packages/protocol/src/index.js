@@ -86,8 +86,9 @@ export const ReceiverJoinPayloadSchema = z.object({
 
 export const SignalPayloadSchema = z.object({
   to: z.string().min(1),
+  from: z.string().optional(),
   payload: z.any(),
-});
+}).passthrough();
 
 export const SessionRemoveReceiverPayloadSchema = z.object({
   receiverId: z.string().min(1),
