@@ -1,0 +1,31 @@
+{
+  "name": "shareport-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run --workspace=@shareport/web dev",
+    "dev:signaling": "npm run --workspace=@shareport/signaling dev",
+    "build": "npm run --workspaces --if-present build",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.11.1",
+    "@playwright/test": "^1.47.2",
+    "@testing-library/jest-dom": "^6.5.0",
+    "@testing-library/react": "^14.3.1",
+    "eslint": "^9.11.1",
+    "eslint-plugin-react": "^7.36.1",
+    "eslint-plugin-react-hooks": "^5.1.0-rc.0",
+    "globals": "^15.9.0",
+    "jsdom": "^25.0.1",
+    "vitest": "^2.1.1"
+  }
+}

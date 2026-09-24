@@ -1,0 +1,14 @@
+name = "shareport-signaling"
+main = "src/index.js"
+compatibility_date = "2024-09-01"
+
+[durable_objects]
+bindings = [
+  { name = "OTP_ROOM", class_name = "OtpRoom" },
+  { name = "SESSION", class_name = "Session" },
+  { name = "LIMITER", class_name = "Limiter" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["OtpRoom", "Session", "Limiter"]
