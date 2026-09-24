@@ -174,6 +174,20 @@ export default function Text() {
     };
   }, [sessionActive, receivers.length]);
 
+  // Warn before leaving if text session is active with receivers (SS-3)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleBeforeUnload = (e) => {
+      if (receivers.length > 0) {
+        e.preventDefault();
+        e.returnValue = 'Text session is currently active. Leaving will end the session.';
+        return e.returnValue;
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [receivers.length]);
+
   // Initialize session and cleanup on unmount
   useEffect(() => {
     ensureSession();

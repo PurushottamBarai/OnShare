@@ -186,6 +186,36 @@ export default function Send() {
     };
   }, [sessionActive, receivers.length]);
 
+  // Warn before leaving if transfer is active (SS-3)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleBeforeUnload = (e) => {
+      const hasActive = receivers.some(r => r.status === 'sending' || r.status === 'waiting');
+      if (hasActive) {
+        e.preventDefault();
+        e.returnValue = 'Transfer is currently in progress. Leaving will cancel the transfer.';
+        return e.returnValue;
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [receivers]);
+
+  // Screen Wake Lock API during transfer (ST-2)
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('wakeLock' in navigator)) return;
+    let wakeLock = null;
+    const isTransferring = receivers.some(r => r.status === 'sending');
+    if (isTransferring) {
+      navigator.wakeLock.request('screen').then(lock => {
+        wakeLock = lock;
+      }).catch(() => {});
+    }
+    return () => {
+      wakeLock?.release().catch(() => {});
+    };
+  }, [receivers]);
+
   // Initialize session and cleanup on unmount
   useEffect(() => {
     ensureSession();

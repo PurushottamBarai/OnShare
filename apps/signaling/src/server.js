@@ -37,6 +37,10 @@ class InMemoryDONamespace {
     return { name, toString: () => name };
   }
 
+  clear() {
+    this.instances.clear();
+  }
+
   get(id) {
     const key = id.name || id.toString();
     if (!this.instances.has(key)) {
@@ -134,6 +138,10 @@ export function createServer(port = 8787) {
       workerRes.headers.forEach((v, k) => {
         res.setHeader(k, v);
       });
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('X-Frame-Options', 'DENY');
+      res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+      res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
       const body = await workerRes.arrayBuffer();
       res.end(Buffer.from(body));
     } catch (err) {

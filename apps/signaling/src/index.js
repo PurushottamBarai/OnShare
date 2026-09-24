@@ -35,6 +35,14 @@ export default {
         return otpStub.fetch(new Request('http://internal/expire'));
       }
 
+      // Testing helper: reset rate limiter state
+      case '/test/reset-limiter': {
+        if (env?.LIMITER?.clear) {
+          env.LIMITER.clear();
+        }
+        return Response.json({ success: true, reset: true });
+      }
+
       // 2. Receiver WebSocket connection (generates and binds 6-digit code)
       case '/ws/receiver': {
         if (request.headers.get('Upgrade') !== 'websocket') {

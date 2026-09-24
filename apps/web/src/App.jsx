@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
+import ConsentBanner from './components/ConsentBanner.jsx';
 
 const Home = lazy(() => import('./routes/Home.jsx'));
 const Send = lazy(() => import('./routes/Send.jsx'));
@@ -147,6 +148,9 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* Ad & Cookie Consent Prompt (AD-3) */}
+      <ConsentBanner />
     </div>
   );
 }
