@@ -204,7 +204,7 @@ export default function Receive() {
   };
 
   const handleAccept = async () => {
-    if (!peerManagerRef.current) return;
+    if (!peerManagerRef.current || receiverSinkRef.current || textSessionRef.current) return;
 
     if (manifest?.mode === 'text') {
       // Initialize live text session

@@ -85,10 +85,8 @@ export default function Send() {
           }
         },
         onStateChange: (state) => {
-          setReceivers(prev => prev.map(r => {
-            if (r.id !== receiverId) return r;
-            if (state === 'WAITING_ACCEPT') return { ...r, status: 'waiting' };
-            if (state === 'ACCEPTED') {
+          if (state === 'ACCEPTED') {
+            if (!senderPipelinesRef.current.has(receiverId)) {
               // Start streaming file pipeline to this receiver
               const pipeline = new SenderPipeline({
                 dataChannel: pm.dataChannel,
@@ -106,8 +104,13 @@ export default function Send() {
               });
               senderPipelinesRef.current.set(receiverId, pipeline);
               pipeline.start();
-              return { ...r, status: 'sending', progress: 0 };
             }
+          }
+
+          setReceivers(prev => prev.map(r => {
+            if (r.id !== receiverId) return r;
+            if (state === 'WAITING_ACCEPT') return { ...r, status: 'waiting' };
+            if (state === 'ACCEPTED') return { ...r, status: 'sending', progress: 0 };
             if (state === 'DECLINED') return { ...r, status: 'declined' };
             if (state === 'FAILED') return { ...r, status: 'failed' };
             if (state === 'DONE') return { ...r, status: 'done', progress: 100 };
