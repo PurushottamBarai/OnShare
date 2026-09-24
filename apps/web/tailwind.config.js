@@ -4,34 +4,66 @@ export default {
     "./index.html",
     "./src/**/*.{js,jsx}",
   ],
+  darkMode: ['class', '[data-theme="dark"]'],
   theme: {
     extend: {
       colors: {
         bg: {
-          base: '#1A1D23',
-          surface: '#242830',
-          elevated: '#2E333D',
+          base: 'var(--bg-base)',
+          surface: 'var(--bg-surface)',
+          elevated: 'var(--bg-elevated)',
         },
         accent: {
-          primary: '#F5A623',
-          hover: '#FFB84D',
+          primary: 'var(--accent-primary)',
+          hover: 'var(--accent-primary-hover)',
         },
         text: {
-          primary: '#F5F6F7',
-          secondary: '#9CA3AF',
+          primary: 'var(--text-primary)',
+          secondary: 'var(--text-secondary)',
         },
         border: {
-          subtle: '#3A3F4B',
+          subtle: 'var(--border-subtle)',
         },
         status: {
-          success: '#3DDC84',
-          warning: '#F5A623',
-          error: '#E5484D',
-          pending: '#6B7280',
+          success: 'var(--status-success)',
+          warning: 'var(--status-warning)',
+          error: 'var(--status-error)',
+          pending: 'var(--status-pending)',
+        },
+        ad: {
+          bg: 'var(--ad-neutral-bg)',
+          border: 'var(--ad-neutral-border)',
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+      },
+      fontSize: {
+        'h1': ['32px', { lineHeight: '40px', fontWeight: '600' }],
+        'h2': ['20px', { lineHeight: '28px', fontWeight: '600' }],
+        'body': ['16px', { lineHeight: '24px', fontWeight: '400' }],
+        'helper': ['14px', { lineHeight: '20px', fontWeight: '400' }],
+        'code-lg': ['56px', { lineHeight: '1', fontWeight: '700', letterSpacing: '+4px' }],
+        'pill': ['12px', { lineHeight: '16px', fontWeight: '500' }],
+      },
+      spacing: {
+        'xs': '4px',
+        'sm': '8px',
+        'md': '16px',
+        'lg': '24px',
+        'xl': '40px',
+      },
+      borderRadius: {
+        'card': '12px',
+        'button': '8px',
+        'pill': '999px',
+      },
+      maxWidth: {
+        'content': '960px',
+      },
+      screens: {
+        'sm': '640px',
       },
     },
   },

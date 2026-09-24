@@ -3,13 +3,73 @@
 @tailwind utilities;
 
 :root {
+  /* Dark theme (default per UI brief section 3.1) */
+  --bg-base: #1A1D23;
+  --bg-surface: #242830;
+  --bg-elevated: #2E333D;
+  --accent-primary: #F5A623;
+  --accent-primary-hover: #FFB84D;
+  --text-primary: #F5F6F7;
+  --text-secondary: #9CA3AF;
+  --border-subtle: #3A3F4B;
+  --status-success: #3DDC84;
+  --status-warning: #F5A623;
+  --status-error: #E5484D;
+  --status-pending: #6B7280;
+  --ad-neutral-bg: #14171C;
+  --ad-neutral-border: #2B303B;
   color-scheme: dark;
+}
+
+[data-theme="light"], .light {
+  /* Light theme (alternate per UI brief section 3.2) */
+  --bg-base: #FFFFFF;
+  --bg-surface: #F7F8FA;
+  --bg-elevated: #FFFFFF;
+  --accent-primary: #D9770A;
+  --accent-primary-hover: #B45309;
+  --text-primary: #1A1D23;
+  --text-secondary: #5B6472;
+  --border-subtle: #E2E5EA;
+  --status-success: #1FA971;
+  --status-warning: #D9770A;
+  --status-error: #D8353C;
+  --status-pending: #6B7280;
+  --ad-neutral-bg: #F1F3F6;
+  --ad-neutral-border: #DDE1E7;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg-base: #FFFFFF;
+    --bg-surface: #F7F8FA;
+    --bg-elevated: #FFFFFF;
+    --accent-primary: #D9770A;
+    --accent-primary-hover: #B45309;
+    --text-primary: #1A1D23;
+    --text-secondary: #5B6472;
+    --border-subtle: #E2E5EA;
+    --status-success: #1FA971;
+    --status-warning: #D9770A;
+    --status-error: #D8353C;
+    --status-pending: #6B7280;
+    --ad-neutral-bg: #F1F3F6;
+    --ad-neutral-border: #DDE1E7;
+    color-scheme: light;
+  }
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: #1A1D23;
-  color: #F5F6F7;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+/* Subtle transitions per UI Brief section 3.5 */
+button, a, input, select, textarea {
+  transition: all 150ms ease;
 }
