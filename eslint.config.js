@@ -29,6 +29,7 @@ export default [
         ...globals.browser,
         ...globals.node,
         ...globals.es2021,
+        WebSocketPair: 'readonly',
       },
     },
     plugins: {

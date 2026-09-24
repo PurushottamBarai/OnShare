@@ -17,6 +17,6 @@ describe('Signaling Worker Scaffold', () => {
     const response = await worker.fetch(request, {}, {});
     expect(response.status).toBe(200);
     const text = await response.text();
-    expect(text).toContain('SharePort Signaling Service Scaffold');
+    expect(text).toContain('SharePort Signaling Service');
   });
 });
