@@ -1,5 +1,5 @@
 /**
- * SharePort Signaling Service (Cloudflare Workers + Durable Objects)
+ * OnShare Signaling Service (Cloudflare Workers + Durable Objects)
  * Plain JavaScript (ES2022+) per TRD Sections 3, 4, 5, 6
  */
 
@@ -7,6 +7,23 @@ import { OtpRoom } from './otp-room.js';
 import { Session } from './session.js';
 import { Limiter } from './limiter.js';
 import { generate6DigitCode, hashAddress, getClientIp } from './utils.js';
+
+function getWorkerNamespace(request, url) {
+  return (
+    request.headers.get('x-test-worker-index') ||
+    url.searchParams.get('workerIndex') ||
+    process.env.TEST_WORKER_INDEX ||
+    'default'
+  );
+}
+
+function getOtpKey(code, namespace) {
+  return namespace && namespace !== 'default' ? `${namespace}:${code}` : code;
+}
+
+function getLimiterKey(ipHash, namespace) {
+  return namespace && namespace !== 'default' ? `${namespace}:${ipHash}` : ipHash;
+}
 
 export { OtpRoom, Session, Limiter };
 
@@ -20,7 +37,7 @@ export default {
       case '/health': {
         return Response.json({
           status: 'ok',
-          service: 'shareport-signaling',
+          service: 'onshare-signaling',
           timestamp: Date.now(),
         });
       }
@@ -31,16 +48,19 @@ export default {
         if (!code || !env?.OTP_ROOM) {
           return new Response('Missing code', { status: 400 });
         }
-        const otpStub = env.OTP_ROOM.get(env.OTP_ROOM.idFromName(code));
+        const namespace = getWorkerNamespace(request, url);
+        const otpKey = getOtpKey(code, namespace);
+        const otpStub = env.OTP_ROOM.get(env.OTP_ROOM.idFromName(otpKey));
         return otpStub.fetch(new Request('http://internal/expire'));
       }
 
       // Testing helper: reset rate limiter state
       case '/test/reset-limiter': {
+        const namespace = getWorkerNamespace(request, url);
         if (env?.LIMITER?.clear) {
-          env.LIMITER.clear();
+          env.LIMITER.clear(namespace);
         }
-        return Response.json({ success: true, reset: true });
+        return Response.json({ success: true, reset: true, namespace });
       }
 
       // 2. Receiver WebSocket connection (generates and binds 6-digit code)
@@ -49,12 +69,14 @@ export default {
           return new Response('Expected WebSocket upgrade', { status: 426 });
         }
 
+        const namespace = getWorkerNamespace(request, url);
         // Network address rate limit check (TRD 4.2)
         const ip = getClientIp(request);
         const ipHash = await hashAddress(ip);
+        const limiterKey = getLimiterKey(ipHash, namespace);
 
         if (env?.LIMITER) {
-          const limiterStub = env.LIMITER.get(env.LIMITER.idFromName(ipHash));
+          const limiterStub = env.LIMITER.get(env.LIMITER.idFromName(limiterKey));
           const checkRes = await limiterStub.fetch(new Request('http://internal/check', {
             method: 'POST',
             body: JSON.stringify({ action: 'create_code' }),
@@ -81,7 +103,8 @@ export default {
             break;
           }
 
-          const otpStub = env.OTP_ROOM.get(env.OTP_ROOM.idFromName(candidate));
+          const otpKey = getOtpKey(candidate, namespace);
+          const otpStub = env.OTP_ROOM.get(env.OTP_ROOM.idFromName(otpKey));
           const checkRes = await otpStub.fetch(new Request('http://internal/claim-check'));
           const checkData = await checkRes.json().catch(() => ({ available: false }));
 
@@ -98,8 +121,10 @@ export default {
         // Forward to OtpRoom DO
         const targetUrl = new URL(request.url);
         targetUrl.searchParams.set('code', selectedCode);
+        targetUrl.searchParams.set('workerNamespace', namespace);
 
-        const otpRoomStub = env.OTP_ROOM.get(env.OTP_ROOM.idFromName(selectedCode));
+        const otpKey = getOtpKey(selectedCode, namespace);
+        const otpRoomStub = env.OTP_ROOM.get(env.OTP_ROOM.idFromName(otpKey));
         return otpRoomStub.fetch(new Request(targetUrl.toString(), request));
       }
 
@@ -109,6 +134,7 @@ export default {
           return new Response('Expected WebSocket upgrade', { status: 426 });
         }
 
+        const namespace = getWorkerNamespace(request, url);
         const sessionIdParam = url.searchParams.get('sessionId');
         const senderToken = url.searchParams.get('senderToken');
         const isReconnect = Boolean(sessionIdParam && senderToken);
@@ -117,7 +143,8 @@ export default {
         if (!isReconnect && env?.LIMITER) {
           const ip = getClientIp(request);
           const ipHash = await hashAddress(ip);
-          const limiterStub = env.LIMITER.get(env.LIMITER.idFromName(ipHash));
+          const limiterKey = getLimiterKey(ipHash, namespace);
+          const limiterStub = env.LIMITER.get(env.LIMITER.idFromName(limiterKey));
           const checkRes = await limiterStub.fetch(new Request('http://internal/check', {
             method: 'POST',
             body: JSON.stringify({ action: 'create_session' }),
@@ -138,6 +165,7 @@ export default {
         const targetUrl = new URL(request.url);
         targetUrl.searchParams.set('sessionId', sessionId);
         targetUrl.searchParams.set('role', 'sender');
+        targetUrl.searchParams.set('workerNamespace', namespace);
 
         const sessionStub = env.SESSION.get(env.SESSION.idFromName(sessionId));
         return sessionStub.fetch(new Request(targetUrl.toString(), request));
@@ -164,7 +192,7 @@ export default {
       }
 
       default:
-        return new Response('SharePort Signaling Service', { status: 200 });
+        return new Response('OnShare Signaling Service', { status: 200 });
     }
   }
 };
