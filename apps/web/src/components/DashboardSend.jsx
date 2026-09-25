@@ -24,6 +24,7 @@ export default function DashboardSend() {
   const [codeError, setCodeError] = useState(null);
   const [lockoutSeconds, setLockoutSeconds] = useState(0);
   const [deviceLabel] = useState(() => generateDeviceLabel().fullLabel);
+  const [isDragging, setIsDragging] = useState(false);
 
   const signalingRef = useRef(null);
   const peerManagersRef = useRef(new Map());
@@ -169,8 +170,27 @@ export default function DashboardSend() {
     }
   };
 
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+  
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+  
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    // Only reset if dragging leaves the main container, not child elements
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setIsDragging(false);
+    }
+  };
+
   const handleDrop = (event) => {
     event.preventDefault();
+    setIsDragging(false);
     const dropped = Array.from(event.dataTransfer?.files || []);
     if (dropped.length > 0) {
       setFiles(prev => [...prev, ...dropped]);
@@ -193,8 +213,19 @@ export default function DashboardSend() {
   const totalFileSize = files.reduce((acc, f) => acc + f.size, 0);
 
   return (
-    <div className="flex flex-col h-full space-y-6">
-      <div className="flex justify-between items-center px-1">
+    <div 
+      className="flex flex-col h-full space-y-6 relative"
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Background dim/blur effect when dragging */}
+      {isDragging && (
+        <div className="absolute inset-0 -m-8 bg-bg-base/60 backdrop-blur-sm z-10 rounded-xl transition-all duration-300 pointer-events-none" />
+      )}
+
+      <div className={`flex justify-between items-center px-1 relative ${isDragging ? 'z-0 opacity-50' : 'z-20'}`}>
         <div className="flex items-center gap-2 font-bold uppercase text-text-primary text-sm tracking-wide">
           <svg className="w-5 h-5 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -205,35 +236,58 @@ export default function DashboardSend() {
       </div>
 
       <div
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className="w-full h-48 rounded-xl border-2 border-dashed border-border-subtle hover:border-accent-primary bg-bg-surface flex flex-col items-center justify-center transition-colors cursor-pointer shadow-sm"
+        className={`w-full ${files.length > 0 ? 'h-16' : 'h-48'} rounded-xl border-2 flex flex-col items-center justify-center transition-all duration-300 cursor-pointer relative z-20 ${
+          isDragging 
+            ? 'border-solid border-accent-primary bg-accent-primary/10 scale-[1.02] shadow-[0_0_30px_rgba(245,158,11,0.2)]' 
+            : 'border-dashed border-border-subtle hover:border-accent-primary bg-bg-surface shadow-sm'
+        }`}
       >
         <input ref={fileInputRef} type="file" multiple onChange={handleFileSelect} className="hidden" />
-        <div className="w-10 h-10 rounded-full bg-bg-elevated flex items-center justify-center mb-3">
-          <svg className="w-5 h-5 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-          </svg>
-        </div>
-        <p className="font-semibold text-sm text-text-primary">Browse or Drag & drop files</p>
-        <p className="text-xs text-text-secondary mt-1">Direct peer transfer link</p>
+        
+        {files.length === 0 ? (
+          <>
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-3 transition-colors duration-300 ${isDragging ? 'bg-accent-primary text-bg-base shadow-[0_0_15px_rgba(245,158,11,0.5)]' : 'bg-bg-elevated text-text-secondary'}`}>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+            </div>
+            <p className={`font-semibold text-sm transition-colors duration-300 ${isDragging ? 'text-accent-primary' : 'text-text-primary'}`}>
+              {isDragging ? 'Drop files here!' : 'Browse or Drag & drop files'}
+            </p>
+            <p className="text-xs text-text-secondary mt-1">Direct peer transfer link</p>
+          </>
+        ) : (
+          <div className="flex items-center gap-2">
+            <svg className={`w-5 h-5 transition-colors duration-300 ${isDragging ? 'text-accent-primary' : 'text-text-secondary'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+            </svg>
+            <p className={`font-semibold text-sm transition-colors duration-300 ${isDragging ? 'text-accent-primary' : 'text-text-primary'}`}>
+              {isDragging ? 'Drop more files here!' : 'Add more files'}
+            </p>
+          </div>
+        )}
       </div>
 
       {files.length > 0 && (
         <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Expiry:</span>
-            <div className="flex rounded border border-border-subtle overflow-hidden text-xs font-medium">
-              {[2, 5, 30].map(m => (
-                <button
-                  key={m}
-                  onClick={() => setValidity(m)}
-                  className={`px-3 py-1.5 ${validity === m ? 'bg-accent-primary text-bg-base' : 'bg-bg-surface text-text-secondary hover:text-text-primary'}`}
-                >
-                  {m}min
-                </button>
-              ))}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Expiry:</span>
+              <div className="flex rounded border border-border-subtle overflow-hidden text-xs font-medium">
+                {[2, 5, 30].map(m => (
+                  <button
+                    key={m}
+                    onClick={() => setValidity(m)}
+                    className={`px-3 py-1.5 ${validity === m ? 'bg-accent-primary text-bg-base' : 'bg-bg-surface text-text-secondary hover:text-text-primary'}`}
+                  >
+                    {m}min
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="text-xs text-right text-text-secondary font-medium">
+              Total Files: {files.length}, {formatBytes(totalFileSize)}
             </div>
           </div>
 
@@ -252,35 +306,7 @@ export default function DashboardSend() {
                 </button>
               </div>
             ))}
-            <div className="text-xs text-right text-text-secondary font-medium pt-1">
-              Total Files: {files.length}, {formatBytes(totalFileSize)}
-            </div>
           </div>
-
-          <form onSubmit={handleAddReceiver} className="pt-2">
-            <div className="flex w-full">
-              <input
-                type="text"
-                maxLength={6}
-                value={codeEntry}
-                onChange={(e) => setCodeEntry(e.target.value.replace(/\D/g, ''))}
-                placeholder="Receiver Code"
-                disabled={lockoutSeconds > 0}
-                className="flex-1 px-4 py-2.5 rounded-l bg-bg-elevated border border-r-0 border-border-subtle focus:border-accent-primary text-text-primary font-mono text-sm tracking-widest placeholder:tracking-normal placeholder:font-sans focus:outline-none"
-              />
-              <button
-                type="submit"
-                disabled={codeEntry.length !== 6 || lockoutSeconds > 0}
-                className="px-4 py-2.5 rounded-r border border-l-0 border-accent-primary bg-accent-primary hover:bg-accent-hover disabled:opacity-50 text-bg-base flex items-center justify-center transition-colors cursor-pointer"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
-              </button>
-            </div>
-            {codeError && <p className="text-xs text-status-error mt-2">{codeError}</p>}
-            {lockoutSeconds > 0 && <LockoutBanner remainingSeconds={lockoutSeconds} message="Too many attempts." />}
-          </form>
 
           {receivers.length > 0 && (
             <div className="pt-4 border-t border-border-subtle space-y-3">
@@ -307,6 +333,32 @@ export default function DashboardSend() {
           )}
         </div>
       )}
+
+      {/* Receiver Code Input - Always Visible */}
+      <form onSubmit={handleAddReceiver} className="flex flex-col w-full mt-auto">
+        <div className="flex w-full">
+          <input
+            type="text"
+            maxLength={6}
+            value={codeEntry}
+            onChange={(e) => setCodeEntry(e.target.value.replace(/\D/g, ''))}
+            placeholder="Receiver Code"
+            disabled={lockoutSeconds > 0}
+            className="flex-1 px-4 py-2.5 rounded-l bg-bg-elevated border border-r-0 border-border-subtle focus:border-accent-primary text-text-primary font-mono text-sm tracking-widest placeholder:tracking-normal placeholder:font-sans focus:outline-none"
+          />
+          <button
+            type="submit"
+            disabled={codeEntry.length !== 6 || lockoutSeconds > 0}
+            className="px-4 py-2.5 rounded-r border border-l-0 border-accent-primary bg-accent-primary hover:bg-accent-hover disabled:opacity-50 text-bg-base flex items-center justify-center transition-colors cursor-pointer"
+          >
+            <svg className="w-4 h-4 transform rotate-45 -ml-0.5 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+          </button>
+        </div>
+        {codeError && <p className="text-xs text-status-error mt-2">{codeError}</p>}
+        {lockoutSeconds > 0 && <LockoutBanner remainingSeconds={lockoutSeconds} message="Too many attempts." />}
+      </form>
     </div>
   );
 }

@@ -170,7 +170,7 @@ export default function DashboardReceive({ onTextSessionActive }) {
       </div>
 
       <div className="w-full h-48 rounded-xl border border-border-subtle bg-bg-surface flex flex-col items-center justify-center shadow-sm">
-        <div className="text-4xl font-mono font-bold tracking-[0.5em] text-text-primary mb-6 ml-4 select-all">
+        <div className="text-4xl font-mono font-bold tracking-[0.5em] text-accent-primary mb-6 ml-4 select-all">
           {code ? `${code.slice(0, 3)} ${code.slice(3)}` : '------'}
         </div>
         

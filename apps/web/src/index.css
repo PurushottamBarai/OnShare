@@ -3,59 +3,57 @@
 @tailwind utilities;
 
 :root {
-  /* Dark theme (default per UI brief section 3.1) */
-  --bg-base: #1A1D23;
-  --bg-surface: #242830;
-  --bg-elevated: #2E333D;
-  --accent-primary: #F5A623;
-  --accent-primary-hover: #FFB84D;
-  --text-primary: #F5F6F7;
-  --text-secondary: #9CA3AF;
-  --border-subtle: #3A3F4B;
+  --bg-base: #DBD8E3;
+  --bg-surface: #F5F4F8;
+  --bg-elevated: #FFFFFF;
+  --accent-primary: #5C5470;
+  --accent-primary-hover: #352F44;
+  --text-primary: #2A2438;
+  --text-secondary: #5C5470;
+  --border-subtle: #DBD8E3;
   --status-success: #3DDC84;
-  --status-warning: #F5A623;
+  --status-warning: #5C5470;
   --status-error: #E5484D;
   --status-pending: #6B7280;
-  --ad-neutral-bg: #14171C;
-  --ad-neutral-border: #2B303B;
-  color-scheme: dark;
+  --ad-neutral-bg: #DBD8E3;
+  --ad-neutral-border: #5C5470;
+  color-scheme: light;
 }
 
 [data-theme="light"], .light {
-  /* Light theme (alternate per UI brief section 3.2) */
-  --bg-base: #FFFFFF;
-  --bg-surface: #F7F8FA;
+  --bg-base: #DBD8E3;
+  --bg-surface: #F5F4F8;
   --bg-elevated: #FFFFFF;
-  --accent-primary: #D9770A;
-  --accent-primary-hover: #B45309;
-  --text-primary: #1A1D23;
-  --text-secondary: #5B6472;
-  --border-subtle: #E2E5EA;
+  --accent-primary: #5C5470;
+  --accent-primary-hover: #352F44;
+  --text-primary: #2A2438;
+  --text-secondary: #5C5470;
+  --border-subtle: #DBD8E3;
   --status-success: #1FA971;
-  --status-warning: #D9770A;
+  --status-warning: #5C5470;
   --status-error: #D8353C;
   --status-pending: #6B7280;
-  --ad-neutral-bg: #F1F3F6;
-  --ad-neutral-border: #DDE1E7;
+  --ad-neutral-bg: #DBD8E3;
+  --ad-neutral-border: #5C5470;
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
-    --bg-base: #FFFFFF;
-    --bg-surface: #F7F8FA;
+    --bg-base: #DBD8E3;
+    --bg-surface: #F5F4F8;
     --bg-elevated: #FFFFFF;
-    --accent-primary: #D9770A;
-    --accent-primary-hover: #B45309;
-    --text-primary: #1A1D23;
-    --text-secondary: #5B6472;
-    --border-subtle: #E2E5EA;
+    --accent-primary: #5C5470;
+    --accent-primary-hover: #352F44;
+    --text-primary: #2A2438;
+    --text-secondary: #5C5470;
+    --border-subtle: #DBD8E3;
     --status-success: #1FA971;
-    --status-warning: #D9770A;
+    --status-warning: #5C5470;
     --status-error: #D8353C;
     --status-pending: #6B7280;
-    --ad-neutral-bg: #F1F3F6;
-    --ad-neutral-border: #DDE1E7;
+    --ad-neutral-bg: #DBD8E3;
+    --ad-neutral-border: #5C5470;
     color-scheme: light;
   }
 }
@@ -72,4 +70,7 @@ body {
 /* Subtle transitions per UI Brief section 3.5 */
 button, a, input, select, textarea {
   transition: all 150ms ease;
+}
+button {
+  white-space: nowrap;
 }
