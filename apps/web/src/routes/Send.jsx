@@ -7,7 +7,6 @@ import { SenderPipeline, generateZipFilename } from '../transfer/senderPipeline.
 import StatusPill from '../components/StatusPill.jsx';
 import DeviceLabelChip from '../components/DeviceLabelChip.jsx';
 import LockoutBanner from '../components/LockoutBanner.jsx';
-import AdSlot from '../components/AdSlot.jsx';
 
 function formatBytes(bytes) {
   if (!bytes || bytes === 0) return '0 B';
@@ -341,7 +340,7 @@ export default function Send() {
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}
         data-testid="file-drop-zone"
-        className="w-full p-8 rounded-card border-2 border-dashed border-border-subtle hover:border-accent-primary bg-bg-surface/50 text-center transition-colors cursor-pointer"
+        className="w-full max-w-lg p-8 rounded-card border-2 border-dashed border-border-subtle hover:border-accent-primary bg-bg-surface/50 text-center transition-colors cursor-pointer shadow-sm mx-auto flex flex-col items-center justify-center min-h-[300px]"
         onClick={() => fileInputRef.current?.click()}
       >
         <input
@@ -417,47 +416,43 @@ export default function Send() {
               ))}
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Code Entry Field & Add Receiver (SN-4, SN-5, SN-9) */}
-      <div className="p-6 rounded-card bg-bg-surface border border-border-subtle space-y-4">
-        <div>
-          <h2 className="text-h2 text-text-primary">Add Receiver</h2>
-          <p className="text-helper text-text-secondary">
-            Ask the receiver for their 6-digit access code and enter it below.
-          </p>
-        </div>
-
-        <form onSubmit={handleAddReceiver} className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1">
-            <input
-              type="text"
-              maxLength={6}
-              value={codeEntry}
-              onChange={(e) => setCodeEntry(e.target.value.replace(/\D/g, ''))}
-              placeholder="Enter 6-digit receiver code (e.g. 123456)"
-              disabled={lockoutSeconds > 0}
-              data-testid="receiver-code-input"
-              className="w-full px-4 py-2.5 rounded-button bg-bg-elevated border border-border-subtle focus:border-accent-primary text-text-primary font-mono text-base tracking-widest placeholder:tracking-normal placeholder:font-sans focus:outline-none"
-            />
+          {/* Compact Receiver Code Input — always visible once files are added (SN-4, SN-5, SN-9) */}
+          <form onSubmit={handleAddReceiver} className="pt-3 border-t border-border-subtle">
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium text-text-secondary whitespace-nowrap">Receiver Code</label>
+              <div className="flex flex-1 max-w-xs">
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={codeEntry}
+                  onChange={(e) => setCodeEntry(e.target.value.replace(/\D/g, ''))}
+                  placeholder="6-digit code"
+                  disabled={lockoutSeconds > 0}
+                  data-testid="receiver-code-input"
+                  className="flex-1 px-3 py-1.5 rounded-l-lg bg-bg-elevated border border-r-0 border-border-subtle focus:border-accent-primary text-text-primary font-mono text-sm tracking-widest placeholder:tracking-normal placeholder:font-sans focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  disabled={codeEntry.length !== 6 || lockoutSeconds > 0}
+                  data-testid="add-receiver-btn"
+                  className="px-3 py-1.5 rounded-r-lg border border-l-0 border-accent-primary bg-accent-primary hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed text-bg-base cursor-pointer flex items-center justify-center"
+                  title="Send to receiver"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
             {codeError && (
-              <p data-testid="code-error-text" className="text-xs text-status-error mt-1.5 font-medium">
+              <p data-testid="code-error-text" className="text-xs text-status-error mt-2 font-medium">
                 {codeError}
               </p>
             )}
-          </div>
-
-          <button
-            type="submit"
-            disabled={codeEntry.length !== 6 || lockoutSeconds > 0}
-            data-testid="add-receiver-btn"
-            className="px-6 py-2.5 rounded-button font-semibold bg-accent-primary hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed text-bg-base cursor-pointer shadow-sm flex items-center justify-center gap-2"
-          >
-            Add Receiver
-          </button>
-        </form>
-      </div>
+          </form>
+        </div>
+      )}
 
       {/* Receiver List & Live Status (SN-5, SN-6, SN-7, SN-10) */}
       {receivers.length > 0 && (
@@ -501,8 +496,6 @@ export default function Send() {
           </div>
         </div>
       )}
-
-      <AdSlot height="100px" />
     </div>
   );
 }

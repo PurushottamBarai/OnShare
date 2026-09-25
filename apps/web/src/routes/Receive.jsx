@@ -4,7 +4,6 @@ import { PeerManager } from '../webrtc/PeerManager.js';
 import { ReceiverSink } from '../transfer/receiverSink.js';
 import { TextSession, MAX_TEXT_CHARACTERS } from '../text/TextSession.js';
 import DeviceLabelChip from '../components/DeviceLabelChip.jsx';
-import AdSlot from '../components/AdSlot.jsx';
 
 function formatTime(seconds) {
   const m = Math.floor(seconds / 60);
@@ -288,7 +287,7 @@ export default function Receive() {
     <div data-testid="route-receive" className="w-full max-w-content mx-auto py-8 px-4 flex flex-col items-center">
       {/* 1. Waiting for Sender State (RC-1, RC-2, RC-3, RC-4) */}
       {(receiverState === 'CONNECTING' || receiverState === 'WAITING' || receiverState === 'MATCHED') && (
-        <div className="w-full max-w-md p-8 rounded-card bg-bg-surface border border-border-subtle text-center shadow-lg">
+        <div className="w-full max-w-lg p-8 rounded-card bg-bg-surface border border-border-subtle shadow-sm text-center mx-auto flex flex-col justify-center min-h-[300px]">
           <span className="text-xs uppercase tracking-wider font-semibold text-accent-primary">
             Receiver Code
           </span>
@@ -354,86 +353,56 @@ export default function Receive() {
         </div>
       )}
 
-      {/* 2. Accept / Decline Handshake Prompt (RC-5, FL-8) */}
+      {/* 2. Accept / Decline — compact inline card (RC-5, FL-8) */}
       {receiverState === 'AWAITING_ACCEPT' && manifest && (
         <div
           data-testid="accept-decline-modal"
-          className="w-full max-w-lg p-6 sm:p-8 rounded-card bg-bg-surface border-2 border-accent-primary shadow-2xl text-center"
+          className="w-full max-w-md p-4 rounded-card bg-bg-surface border border-border-subtle shadow-sm"
         >
-          <div className="w-12 h-12 rounded-full bg-accent-primary/20 text-accent-primary flex items-center justify-center mx-auto mb-4">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-            </svg>
-          </div>
-
-          <h2 className="text-h2 text-text-primary mb-1">
-            {manifest.mode === 'text' ? 'Incoming Live Text' : 'Incoming Transfer Request'}
-          </h2>
-          <p className="text-helper text-text-secondary mb-4">
-            {manifest.mode === 'text'
-              ? 'A sender wants to share a live collaborative text session with you.'
-              : 'A sender connected with your code and wants to send you content.'}
-          </p>
-
-          {/* Sender Device Label (SN-10, RC-5) */}
-          <div className="my-4">
+          <div className="flex items-start gap-3 mb-3">
             <DeviceLabelChip name={manifest.senderLabel || 'Unknown Peer'} />
-          </div>
-
-          {/* Executable caution warning note (PRD FL-8) */}
-          {hasExecutableFiles && (
-            <div data-testid="executable-warning" className="my-3 p-3 rounded bg-status-warning/15 border border-status-warning text-xs text-status-warning text-left flex items-start gap-2">
-              <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              <span>Caution: Contains executable or script files. Only accept if you trust the sender.</span>
-            </div>
-          )}
-
-          {/* Manifest summary */}
-          {manifest.mode !== 'text' && (
-            <div className="my-6 p-4 rounded-button bg-bg-elevated border border-border-subtle text-left space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-text-secondary">Total Files:</span>
-                <span className="font-semibold text-text-primary" data-testid="manifest-file-count">
-                  {manifest.files?.length || 0}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-text-secondary">Total Size:</span>
-                <span className="font-semibold text-text-primary" data-testid="manifest-total-size">
-                  {formatBytes(manifest.totalSize)}
-                </span>
-              </div>
-
-              {manifest.files && manifest.files.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-border-subtle max-h-36 overflow-y-auto space-y-1">
-                  {manifest.files.map((file, idx) => (
-                    <div key={idx} className="flex justify-between text-xs text-text-secondary py-0.5">
-                      <span className="truncate pr-2">{file.name}</span>
-                      <span className="font-mono flex-shrink-0">{formatBytes(file.size)}</span>
-                    </div>
+            <div className="flex-1 min-w-0 text-left">
+              {manifest.mode === 'text' ? (
+                <p className="text-sm text-text-primary font-medium">Live Text Session</p>
+              ) : (
+                <>
+                  <p className="text-sm text-text-primary font-medium" data-testid="manifest-file-count">
+                    {manifest.files?.length || 0} file{(manifest.files?.length || 0) !== 1 ? 's' : ''} · <span data-testid="manifest-total-size">{formatBytes(manifest.totalSize)}</span>
+                  </p>
+                  {manifest.files && manifest.files.length <= 3 && manifest.files.map((file, idx) => (
+                    <p key={idx} className="text-xs text-text-secondary truncate">{file.name}</p>
                   ))}
-                </div>
+                  {manifest.files && manifest.files.length > 3 && (
+                    <p className="text-xs text-text-secondary">{manifest.files[0].name} and {manifest.files.length - 1} more…</p>
+                  )}
+                </>
               )}
             </div>
+          </div>
+
+          {hasExecutableFiles && (
+            <div data-testid="executable-warning" className="mb-3 p-2 rounded bg-status-warning/15 border border-status-warning text-xs text-status-warning flex items-center gap-2">
+              <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <span>Contains executable files — only accept if you trust the sender.</span>
+            </div>
           )}
 
-          {/* Accept / Decline Action Buttons (RC-5) */}
-          <div className="flex items-center justify-center gap-4 mt-6">
+          <div className="flex items-center gap-2">
             <button
               onClick={handleDecline}
               data-testid="decline-btn"
-              className="flex-1 py-3 px-4 rounded-button font-semibold bg-bg-elevated border border-border-subtle hover:border-status-error text-status-error cursor-pointer"
+              className="flex-1 py-2 px-3 rounded-button text-sm font-medium bg-bg-elevated border border-border-subtle hover:border-status-error text-status-error cursor-pointer"
             >
               Decline
             </button>
             <button
               onClick={handleAccept}
               data-testid="accept-btn"
-              className="flex-1 py-3 px-4 rounded-button font-semibold bg-accent-primary hover:bg-accent-hover text-bg-base cursor-pointer shadow-md"
+              className="flex-1 py-2 px-3 rounded-button text-sm font-medium bg-accent-primary hover:bg-accent-hover text-bg-base cursor-pointer"
             >
-              {manifest.mode === 'text' ? 'Join Text Session' : 'Accept Transfer'}
+              Accept
             </button>
           </div>
         </div>
@@ -611,8 +580,6 @@ export default function Receive() {
           </button>
         </div>
       )}
-
-      <AdSlot height="100px" className="mt-10" />
     </div>
   );
 }

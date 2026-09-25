@@ -7,7 +7,6 @@ import { generateDeviceLabel } from '../utils/deviceLabel.js';
 import StatusPill from '../components/StatusPill.jsx';
 import DeviceLabelChip from '../components/DeviceLabelChip.jsx';
 import LockoutBanner from '../components/LockoutBanner.jsx';
-import AdSlot from '../components/AdSlot.jsx';
 
 export default function Text() {
   const [text, setText] = useState('');
@@ -273,9 +272,9 @@ export default function Text() {
   };
 
   return (
-    <div data-testid="route-text" className="w-full max-w-content mx-auto py-8 px-4 space-y-8">
+    <div data-testid="route-text" className="w-full max-w-content mx-auto py-8 px-4 space-y-8 flex flex-col items-center">
       {/* Header and Switcher to Send (SN-1, TX-1) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border-subtle pb-4">
+      <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border-subtle pb-4">
         <div>
           <h1 className="text-h1 text-text-primary">Share Live Text</h1>
           <p className="text-helper text-text-secondary">
@@ -296,7 +295,7 @@ export default function Text() {
 
       {/* Persistent Keep Tab Open Banner (SN-8) */}
       {sessionActive && (
-        <div data-testid="keep-tab-banner" className="p-3 rounded-button bg-bg-surface border border-status-warning/40 text-sm text-status-warning flex items-center justify-between gap-3">
+        <div data-testid="keep-tab-banner" className="w-full p-3 rounded-button bg-bg-surface border border-status-warning/40 text-sm text-status-warning flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -319,9 +318,9 @@ export default function Text() {
       )}
 
       {/* Main Text Editor Card (TX-1, TX-2, TX-4, TX-5) */}
-      <div className="p-6 rounded-card bg-bg-surface border border-border-subtle space-y-4 shadow-sm">
+      <div className="w-full max-w-lg p-8 rounded-card bg-bg-surface border border-border-subtle shadow-sm text-center mx-auto flex flex-col justify-between min-h-[300px] space-y-4">
         {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-border-subtle">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-border-subtle text-left">
           {/* Edit Toggle for Receivers (TX-2) */}
           <div className="flex items-center gap-3">
             <label className="text-sm font-semibold text-text-primary flex items-center gap-2 cursor-pointer">
@@ -359,7 +358,7 @@ export default function Text() {
         </div>
 
         {/* Textarea */}
-        <div className="relative">
+        <div className="relative text-left">
           <textarea
             value={text}
             onChange={handleTextChange}
@@ -373,9 +372,41 @@ export default function Text() {
             <span data-testid="char-counter">{text.length} / {MAX_TEXT_CHARACTERS}</span>
           </div>
         </div>
+        
+        {/* Compact Receiver Code Input for Text Live — directly below text box */}
+        <form onSubmit={handleAddReceiver} className="pt-3 flex flex-col items-center">
+          <div className="flex items-center w-full">
+            <input
+              type="text"
+              maxLength={6}
+              value={codeEntry}
+              onChange={(e) => setCodeEntry(e.target.value.replace(/\D/g, ''))}
+              placeholder="Enter 6-digit receiver code"
+              disabled={lockoutSeconds > 0}
+              data-testid="receiver-code-input"
+              className="flex-1 px-4 py-2.5 rounded-l-button bg-bg-elevated border border-r-0 border-border-subtle focus:border-accent-primary text-text-primary font-mono text-base tracking-widest placeholder:tracking-normal placeholder:font-sans focus:outline-none"
+            />
+            <button
+              type="submit"
+              disabled={codeEntry.length !== 6 || lockoutSeconds > 0}
+              data-testid="add-receiver-btn"
+              className="px-4 py-2.5 rounded-r-button border border-l-0 border-accent-primary bg-accent-primary hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed text-bg-base cursor-pointer flex items-center justify-center"
+              title="Send to receiver"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+              </svg>
+            </button>
+          </div>
+          {codeError && (
+            <p data-testid="code-error-text" className="text-xs text-status-error mt-2 font-medium w-full text-left">
+              {codeError}
+            </p>
+          )}
+        </form>
 
         {/* Validity Selector Chip Group (SN-3, PRD 6.3) */}
-        <div className="pt-3 border-t border-border-subtle flex flex-wrap items-center justify-between gap-3 text-sm">
+        <div className="pt-3 mt-3 border-t border-border-subtle flex flex-wrap items-center justify-between gap-3 text-sm text-left">
           <span className="text-text-secondary">Session Validity:</span>
           <div className="flex flex-wrap gap-1.5">
             {[2, 5, 10, 30, 60].map((mins) => (
@@ -391,48 +422,9 @@ export default function Text() {
         </div>
       </div>
 
-      {/* Code Entry Field & Add Receiver (SN-4, SN-5, SN-9) */}
-      <div className="p-6 rounded-card bg-bg-surface border border-border-subtle space-y-4">
-        <div>
-          <h2 className="text-h2 text-text-primary">Add Receiver</h2>
-          <p className="text-helper text-text-secondary">
-            Ask the receiver for their 6-digit access code and enter it below.
-          </p>
-        </div>
-
-        <form onSubmit={handleAddReceiver} className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1">
-            <input
-              type="text"
-              maxLength={6}
-              value={codeEntry}
-              onChange={(e) => setCodeEntry(e.target.value.replace(/\D/g, ''))}
-              placeholder="Enter 6-digit receiver code (e.g. 123456)"
-              disabled={lockoutSeconds > 0}
-              data-testid="receiver-code-input"
-              className="w-full px-4 py-2.5 rounded-button bg-bg-elevated border border-border-subtle focus:border-accent-primary text-text-primary font-mono text-base tracking-widest placeholder:tracking-normal placeholder:font-sans focus:outline-none"
-            />
-            {codeError && (
-              <p data-testid="code-error-text" className="text-xs text-status-error mt-1.5 font-medium">
-                {codeError}
-              </p>
-            )}
-          </div>
-
-          <button
-            type="submit"
-            disabled={codeEntry.length !== 6 || lockoutSeconds > 0}
-            data-testid="add-receiver-btn"
-            className="px-6 py-2.5 rounded-button font-semibold bg-accent-primary hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed text-bg-base cursor-pointer shadow-sm flex items-center justify-center gap-2"
-          >
-            Add Receiver
-          </button>
-        </form>
-      </div>
-
       {/* Receiver List & Live Status (SN-5, SN-6, SN-7, SN-10) */}
       {receivers.length > 0 && (
-        <div data-testid="receivers-list" className="p-6 rounded-card bg-bg-surface border border-border-subtle space-y-4">
+        <div data-testid="receivers-list" className="w-full max-w-lg p-6 rounded-card bg-bg-surface border border-border-subtle space-y-4">
           <div className="flex items-center justify-between pb-2 border-b border-border-subtle">
             <h2 className="text-h2 text-text-primary">
               Connected Receivers ({receivers.length} / 10)
@@ -472,8 +464,6 @@ export default function Text() {
           </div>
         </div>
       )}
-
-      <AdSlot height="100px" />
     </div>
   );
 }
