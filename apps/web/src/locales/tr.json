@@ -1,0 +1,34 @@
+{
+  "nav": {
+    "send": "Gönder",
+    "receive": "Al",
+    "textLive": "Canlı Metin",
+    "contact": "İletişim"
+  },
+  "footer": {
+    "tagline": "Dosyaları ve metinleri anında, güvenli bir şekilde ve kaydolmadan paylaşın",
+    "howItWorks": "Nasıl Çalışır",
+    "privacyPolicy": "Gizlilik Politikası",
+    "termsOfUse": "Kullanım Koşulları",
+    "contact": "İletişim",
+    "feedback": "Geri bildirim"
+  },
+  "status": {
+    "waitingForPeer": "Bekliyor,",
+    "connecting": "Bağlanıyor",
+    "transferring": "Transfer yapılıyor",
+    "complete": "Tamamla",
+    "disconnected": "Bağlantı kesildi",
+    "error": "Hata"
+  },
+  "home": {
+    "title": "Dosyaları Gönder",
+    "receiveTitle": "Dosyaları Al",
+    "textTitle": "Canlı Metin"
+  },
+  "common": {
+    "loading": "Yükleniyor... Lütfen bekleyin...",
+    "advertisement": "Reklam",
+    "reservedSponsorship": "Ayrılmış Sponsorluk Alanı (Müdahalesiz)"
+  }
+}

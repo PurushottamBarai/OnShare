@@ -1,0 +1,34 @@
+{
+  "nav": {
+    "send": "ส่ง",
+    "receive": "รับ",
+    "textLive": "Text Live",
+    "contact": "ติดต่อ"
+  },
+  "footer": {
+    "tagline": "แชร์ไฟล์และข้อความได้ทันทีปลอดภัยและไม่ต้องลงทะเบียน",
+    "howItWorks": "วิธีการทำงาน",
+    "privacyPolicy": "นโยบายความเป็นส่วนตัว",
+    "termsOfUse": "ข้อกำหนดในการใช้งาน",
+    "contact": "ติดต่อ",
+    "feedback": "ข้อเสนอแนะ"
+  },
+  "status": {
+    "waitingForPeer": "กำลังรอเพื่อน",
+    "connecting": "กำลังเชื่อมต่อ",
+    "transferring": "กำลังถ่ายโอน",
+    "complete": "เสร็จสมบูรณ์",
+    "disconnected": "ไม่ได้เชื่อมต่อ",
+    "error": "ข้อผิดพลาด"
+  },
+  "home": {
+    "title": "ส่งไฟล์",
+    "receiveTitle": "รับไฟล์",
+    "textTitle": "Text Live"
+  },
+  "common": {
+    "loading": "กำลังโหลด...",
+    "advertisement": "โฆษณา",
+    "reservedSponsorship": "พื้นที่สนับสนุนที่สงวนไว้ (ไม่ล่วงล้ำ)"
+  }
+}

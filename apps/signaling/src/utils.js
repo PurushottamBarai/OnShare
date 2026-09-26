@@ -1,4 +1,4 @@
-import { serializeMessage } from '@shareport/protocol';
+import { serializeMessage } from '@onshare/protocol';
 
 /**
  * Generate 6 decimal digits with cryptographically secure rejection sampling (TRD 4.1)
@@ -22,7 +22,7 @@ export function generate6DigitCode() {
 /**
  * Hash client IP address with salt (TRD 4.2 & 5.4)
  */
-export async function hashAddress(address, salt = 'shareport-salt-v1') {
+export async function hashAddress(address, salt = 'onshare-salt-v1') {
   const encoder = new TextEncoder();
   const data = encoder.encode((address || 'unknown') + salt);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
@@ -59,16 +59,7 @@ export function sendWsMessage(ws, type, payload = {}, id = null) {
   }
 }
 
-/**
- * Platform-independent WebSocketPair creator
- */
-export function createWebSocketPair() {
-  if (typeof WebSocketPair !== 'undefined') {
-    return new WebSocketPair();
-  }
-  // In non-workerd environments (e.g. testing), tests provide pair or polyfill
-  throw new Error('WebSocketPair is not supported in this runtime. Polyfill or test harness required.');
-}
+
 
 /**
  * Platform-independent WebSocket 101 Switching Protocols response creator

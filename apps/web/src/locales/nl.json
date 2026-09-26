@@ -1,0 +1,34 @@
+{
+  "nav": {
+    "send": "Verzenden",
+    "receive": "Ontvangen",
+    "textLive": "Tekst live",
+    "contact": "Contact"
+  },
+  "footer": {
+    "tagline": "Deel bestanden en tekst direct, veilig en zonder aanmelding",
+    "howItWorks": "Hoe het werkt",
+    "privacyPolicy": "Privacybeleid",
+    "termsOfUse": "Gebruiksvoorwaarden",
+    "contact": "Contact",
+    "feedback": "Feedback"
+  },
+  "status": {
+    "waitingForPeer": "wachtend op",
+    "connecting": "Verbinden",
+    "transferring": "Overdragen",
+    "complete": "Voltooid",
+    "disconnected": "Niet verbonden",
+    "error": "Fout"
+  },
+  "home": {
+    "title": "Bestanden verzenden",
+    "receiveTitle": "Bestanden ontvangen",
+    "textTitle": "Tekst live"
+  },
+  "common": {
+    "loading": "Aan het laden...",
+    "advertisement": "Advertentie",
+    "reservedSponsorship": "Gereserveerde sponsorruimte (niet opdringerig)"
+  }
+}

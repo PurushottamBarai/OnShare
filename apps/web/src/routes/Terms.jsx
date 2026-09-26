@@ -1,61 +1,70 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import AdSlot from '../components/AdSlot.jsx';
+import { useTranslation } from 'react-i18next';
 
 export default function Terms() {
+  const { t } = useTranslation();
   return (
-    <div data-testid="route-terms" className="w-full max-w-content mx-auto py-10 px-4 space-y-8">
-      <div>
-        <h1 className="text-h1 text-text-primary mb-2">Terms of Use</h1>
-        <p className="text-helper text-text-secondary">
-          Effective date: September 2026 • Acceptable Use & Guidelines
+    <main className="flex-1 flex flex-col w-full bg-bg-base">
+      
+      {/* Top Banner with OnShare theme and bottom curve */}
+      <div className="relative w-full bg-gradient-to-r from-accent-hover to-accent-primary py-20 sm:py-24 text-center">
+        <h1 className="text-4xl sm:text-5xl font-bold text-bg-base tracking-wide">
+          {t('termsPage.title')}
+        </h1>
+        <p className="mt-3 text-white text-sm sm:text-base max-w-lg mx-auto px-4">
+          {t('termsPage.subtitle')}
         </p>
+
+        {/* Bottom subtle wave curve */}
+        <div className="absolute bottom-0 left-0 right-0 overflow-hidden leading-none pointer-events-none">
+          <svg
+            className="relative block w-full h-5 sm:h-6 text-bg-base fill-current"
+            viewBox="0 0 1200 120"
+            preserveAspectRatio="none"
+          >
+            <path d="M0,0 C200,60 400,20 600,50 C800,80 1000,30 1200,45 L1200,120 L0,120 Z" />
+          </svg>
+        </div>
       </div>
 
-      <div className="space-y-6 text-sm text-text-secondary leading-relaxed bg-bg-surface p-6 sm:p-8 rounded-card border border-border-subtle">
-        <section className="space-y-2">
-          <h2 className="text-h2 text-text-primary">1. Acceptance of Terms</h2>
-          <p>
-            By using SharePort, you agree to comply with and be bound by these Terms of Use. If you do not agree to these terms, please discontinue use of the service immediately.
-          </p>
-        </section>
+      {/* Terms Content Area */}
+      <div className="w-full max-w-4xl mx-auto px-6 py-14 sm:py-16">
+        <div className="space-y-8 text-sm text-text-secondary leading-relaxed bg-bg-surface p-8 sm:p-12 rounded-2xl border border-border-subtle shadow-sm">
+          <section className="space-y-3">
+            <h2 className="text-h2 text-text-primary">{t('termsPage.h1')}</h2>
+            <p>
+              {t('termsPage.p1')}
+            </p>
+          </section>
 
-        <section className="space-y-2">
-          <h2 className="text-h2 text-text-primary">2. Service Description</h2>
-          <p>
-            SharePort provides temporary browser-to-browser WebRTC data transmission and real-time live text collaboration without server-side file hosting or user accounts. Both sender and receiver must be online simultaneously for data transfer to succeed.
-          </p>
-        </section>
+          <section className="space-y-3">
+            <h2 className="text-h2 text-text-primary">{t('termsPage.h2')}</h2>
+            <p>
+              {t('termsPage.p2')}
+            </p>
+          </section>
 
-        <section className="space-y-2">
-          <h2 className="text-h2 text-text-primary">3. Acceptable Use Policy</h2>
-          <p>
-            You agree not to use SharePort for any unlawful purpose. Strictly prohibited activities include:
-          </p>
-          <ul className="list-disc pl-5 space-y-1">
-            <li>Transmitting malware, viruses, trojans, ransomware, or malicious scripts.</li>
-            <li>Distributing infringing copyright material or intellectual property without authorization.</li>
-            <li>Sharing harmful, exploitative, threatening, or harassing content.</li>
-            <li>Attempting to brute-force 6-digit access codes or bypass rate limiting mechanisms.</li>
-          </ul>
-        </section>
+          <section className="space-y-3">
+            <h2 className="text-h2 text-text-primary">{t('termsPage.h3')}</h2>
+            <p>
+              {t('termsPage.p3')}
+            </p>
+            <ul className="list-disc pl-5 space-y-1.5">
+              <li>{t('termsPage.li1')}</li>
+              <li>{t('termsPage.li2')}</li>
+              <li>{t('termsPage.li3')}</li>
+              <li>{t('termsPage.li4')}</li>
+            </ul>
+          </section>
 
-        <section className="space-y-2">
-          <h2 className="text-h2 text-text-primary">4. Limitation of Liability and Disclaimer</h2>
-          <p>
-            SharePort is provided on an &quot;AS IS&quot; and &quot;AS AVAILABLE&quot; basis without warranties of any kind. Because SharePort does not inspect or store user content, the sender and receiver are solely responsible for verifying the authenticity and safety of files exchanged.
-          </p>
-        </section>
-
-        <section className="space-y-2">
-          <h2 className="text-h2 text-text-primary">5. Violation and Reporting</h2>
-          <p>
-            We take abuse seriously. If you encounter abusive behavior, submit an immediate notice via our <Link to="/report-abuse" className="text-accent-primary underline">Report Abuse</Link> page.
-          </p>
-        </section>
+          <section className="space-y-3">
+            <h2 className="text-h2 text-text-primary">{t('termsPage.h4')}</h2>
+            <p>
+              {t('termsPage.p4')}
+            </p>
+          </section>
+        </div>
       </div>
-
-      <AdSlot height="100px" />
-    </div>
+    </main>
   );
 }

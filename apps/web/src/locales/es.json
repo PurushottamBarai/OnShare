@@ -1,0 +1,34 @@
+{
+  "nav": {
+    "send": "Enviar",
+    "receive": "Recibir",
+    "textLive": "Texto (online)",
+    "contact": "Contacto"
+  },
+  "footer": {
+    "tagline": "Comparte archivos y texto de forma instantánea, segura y sin registrarte",
+    "howItWorks": "Cómo funciona",
+    "privacyPolicy": "Política de privacidad",
+    "termsOfUse": "Términos de uso",
+    "contact": "Contacto",
+    "feedback": "Comentarios"
+  },
+  "status": {
+    "waitingForPeer": "Esperando a un compañero",
+    "connecting": "Conectando",
+    "transferring": "Transfiriendo",
+    "complete": "Completado",
+    "disconnected": "Desconectado",
+    "error": "Error"
+  },
+  "home": {
+    "title": "Enviar archivos",
+    "receiveTitle": "Recibir archivos",
+    "textTitle": "Texto (online)"
+  },
+  "common": {
+    "loading": "Cargando...",
+    "advertisement": "Publicidad",
+    "reservedSponsorship": "Espacio de patrocinio reservado (no intrusivo)"
+  }
+}

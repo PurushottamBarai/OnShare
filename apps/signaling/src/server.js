@@ -37,8 +37,16 @@ class InMemoryDONamespace {
     return { name, toString: () => name };
   }
 
-  clear() {
-    this.instances.clear();
+  clear(namespace) {
+    if (namespace && namespace !== 'default') {
+      for (const key of this.instances.keys()) {
+        if (key.startsWith(`${namespace}:`)) {
+          this.instances.delete(key);
+        }
+      }
+    } else {
+      this.instances.clear();
+    }
   }
 
   get(id) {
@@ -60,6 +68,27 @@ class InternalSocket extends EventTarget {
     super();
     this.readyState = 1; // OPEN
     this.peer = null;
+    this.messageQueue = [];
+    this.hasMessageListener = false;
+  }
+
+  addEventListener(type, listener, options) {
+    super.addEventListener(type, listener, options);
+    if (type === 'message') {
+      this.hasMessageListener = true;
+      while (this.messageQueue.length > 0) {
+        const event = this.messageQueue.shift();
+        super.dispatchEvent(event);
+      }
+    }
+  }
+
+  dispatchMessage(event) {
+    if (!this.hasMessageListener) {
+      this.messageQueue.push(event);
+    } else {
+      this.dispatchEvent(event);
+    }
   }
 
   send(data) {
@@ -96,8 +125,8 @@ class InternalSocket extends EventTarget {
 
 export function createServer(port = 8787) {
   const env = {
-    TURN_SECRET: process.env.TURN_SECRET || 'shareport-dev-turn-secret',
-    TURN_DOMAIN: process.env.TURN_DOMAIN || 'turn.shareport.net',
+    TURN_SECRET: process.env.TURN_SECRET || 'onshare-dev-turn-secret',
+    TURN_DOMAIN: process.env.TURN_DOMAIN || 'turn.onshare.net',
     createWebSocketPair: () => {
       const store = socketStorage.getStore();
       if (store?.serverSide) {
@@ -125,6 +154,21 @@ export function createServer(port = 8787) {
           headers.set(key, value);
         }
       }
+    }
+
+    if (url.pathname === '/test/shutdown') {
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/json');
+      try {
+        wss.close();
+      } catch {
+        // Ignore close error if already terminated
+      }
+      if (typeof server.closeAllConnections === 'function') {
+        server.closeAllConnections();
+      }
+      await new Promise((resolve) => server.close(resolve));
+      return;
     }
 
     const workerReq = new Request(url.toString(), {
@@ -176,7 +220,7 @@ export function createServer(port = 8787) {
       // When node ws receives message, forward to internal server socket
       ws.on('message', (data) => {
         const text = typeof data === 'string' ? data : data.toString();
-        serverSide.dispatchEvent(new MessageEventImpl('message', { data: text }));
+        serverSide.dispatchMessage(new MessageEventImpl('message', { data: text }));
       });
 
       ws.on('close', (code, reason) => {
@@ -207,6 +251,7 @@ export function createServer(port = 8787) {
 
   return new Promise((resolve) => {
     server.listen(port, '0.0.0.0', () => {
+      globalThis.__signalingServer = server;
       resolve(server);
     });
   });
@@ -216,6 +261,6 @@ export function createServer(port = 8787) {
 if (process.argv[1]?.endsWith('server.js')) {
   const PORT = process.env.PORT || 8787;
   createServer(PORT).then(() => {
-    console.info(`SharePort standalone signaling service running on http://localhost:${PORT}`);
+    console.info(`OnShare standalone signaling service running on http://localhost:${PORT}`);
   });
 }

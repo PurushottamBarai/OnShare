@@ -1,4 +1,4 @@
-import { parseAndValidateMessage, ERROR_CODES } from '@shareport/protocol';
+import { parseAndValidateMessage, ERROR_CODES } from '@onshare/protocol';
 import { sendWsMessage, createWebSocketResponse } from './utils.js';
 
 /**
@@ -185,6 +185,7 @@ export class OtpRoom {
         }
       }
     }, 10 * 60 * 1000);
+    this.expiryTimeout.unref();
 
     serverWs.addEventListener('message', async (event) => {
       try {

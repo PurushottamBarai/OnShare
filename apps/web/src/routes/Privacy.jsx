@@ -1,60 +1,77 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import AdSlot from '../components/AdSlot.jsx';
+import { useTranslation } from 'react-i18next';
 
 export default function Privacy() {
+  const { t } = useTranslation();
   return (
-    <div data-testid="route-privacy" className="w-full max-w-content mx-auto py-10 px-4 space-y-8">
-      <div>
-        <h1 className="text-h1 text-text-primary mb-2">Privacy Policy</h1>
-        <p className="text-helper text-text-secondary">
-          Last updated: September 2026 • Privacy by Architecture
+    <main className="flex-1 flex flex-col w-full bg-bg-base">
+      
+      {/* Top Banner with OnShare theme and bottom curve */}
+      <div className="relative w-full bg-gradient-to-r from-accent-hover to-accent-primary py-20 sm:py-24 text-center">
+        <h1 className="text-4xl sm:text-5xl font-bold text-bg-base tracking-wide">
+          {t('privacyPage.title')}
+        </h1>
+        <p className="mt-3 text-white text-sm sm:text-base max-w-lg mx-auto px-4">
+          {t('privacyPage.subtitle')}
         </p>
+
+        {/* Bottom subtle wave curve */}
+        <div className="absolute bottom-0 left-0 right-0 overflow-hidden leading-none pointer-events-none">
+          <svg
+            className="relative block w-full h-5 sm:h-6 text-bg-base fill-current"
+            viewBox="0 0 1200 120"
+            preserveAspectRatio="none"
+          >
+            <path d="M0,0 C200,60 400,20 600,50 C800,80 1000,30 1200,45 L1200,120 L0,120 Z" />
+          </svg>
+        </div>
       </div>
 
-      <div className="space-y-6 text-sm text-text-secondary leading-relaxed bg-bg-surface p-6 sm:p-8 rounded-card border border-border-subtle">
-        <section className="space-y-2">
-          <h2 className="text-h2 text-text-primary">1. Our Core Principle: Zero Content Storage</h2>
-          <p>
-            SharePort is built from the ground up so that your files, file names, and shared text never touch our disks or databases. All transfers stream directly from browser to browser using peer-to-peer WebRTC connections protected by DTLS encryption.
-          </p>
-        </section>
+      {/* Privacy Content Area */}
+      <div className="w-full max-w-4xl mx-auto px-6 py-14 sm:py-16">
+        <div className="space-y-8 text-sm text-text-secondary leading-relaxed bg-bg-surface p-8 sm:p-12 rounded-2xl border border-border-subtle shadow-sm">
+          <section className="space-y-3">
+            <h2 className="text-h2 text-text-primary">{t('privacyPage.h1')}</h2>
+            <p>
+              {t('privacyPage.p1')}
+            </p>
+          </section>
 
-        <section className="space-y-2">
-          <h2 className="text-h2 text-text-primary">2. Ephemeral Signalling Data</h2>
-          <p>
-            To connect two browsers, our signalling coordination service relays session discovery messages:
-          </p>
-          <ul className="list-disc pl-5 space-y-1">
-            <li><strong>6-Digit Access Codes:</strong> Held strictly in volatile memory for at most 10 minutes and permanently discarded upon match or expiry.</li>
-            <li><strong>Session Identifiers:</strong> Random ephemeral tokens that expire when you close your tab or after your chosen session duration.</li>
-            <li><strong>WebRTC SDP & ICE Candidates:</strong> Connection metadata containing network addresses necessary to establish direct browser-to-browser peer connections.</li>
-          </ul>
-        </section>
+          <section className="space-y-3">
+            <h2 className="text-h2 text-text-primary">{t('privacyPage.h2')}</h2>
+            <p>
+              {t('privacyPage.p2')}
+            </p>
+            <ul className="list-disc pl-5 space-y-1.5">
+              <li><strong>{t('privacyPage.li1a')}</strong> {t('privacyPage.li1b')}</li>
+              <li><strong>{t('privacyPage.li2a')}</strong> {t('privacyPage.li2b')}</li>
+              <li><strong>{t('privacyPage.li3a')}</strong> {t('privacyPage.li3b')}</li>
+            </ul>
+          </section>
 
-        <section className="space-y-2">
-          <h2 className="text-h2 text-text-primary">3. Network Addresses and WebRTC</h2>
-          <p>
-            By nature of peer-to-peer WebRTC connections, each peer browser discovers the other peer&apos;s public network address to route packets directly. Local IP addresses are masked with mDNS hostnames. If a direct link fails and TURN relay is used, encrypted packets pass through the relay server without the relay possessing decryption keys.
-          </p>
-        </section>
+          <section className="space-y-3">
+            <h2 className="text-h2 text-text-primary">{t('privacyPage.h3')}</h2>
+            <p>
+              {t('privacyPage.p3')}
+            </p>
+          </section>
 
-        <section className="space-y-2">
-          <h2 className="text-h2 text-text-primary">4. No Accounts, No Cookies, No Tracking</h2>
-          <p>
-            SharePort requires no registration, email, or passwords. We do not store persistent tracking cookies or collect personally identifiable information (PII). We comply with modern privacy legislation including GDPR and India&apos;s Digital Personal Data Protection Act.
-          </p>
-        </section>
+          <section className="space-y-3">
+            <h2 className="text-h2 text-text-primary">{t('privacyPage.h4')}</h2>
+            <p>
+              {t('privacyPage.p4')}
+            </p>
+          </section>
 
-        <section className="space-y-2">
-          <h2 className="text-h2 text-text-primary">5. Contact and Inquiries</h2>
-          <p>
-            Questions regarding our privacy architecture? Visit our <Link to="/contact" className="text-accent-primary underline">Contact page</Link> or report suspicious activity at our <Link to="/report-abuse" className="text-accent-primary underline">Abuse Center</Link>.
-          </p>
-        </section>
+          <section className="space-y-3">
+            <h2 className="text-h2 text-text-primary">{t('privacyPage.h5')}</h2>
+            <p>
+              <Link to="/contact" className="text-accent-primary underline hover:text-accent-hover font-medium">{t('nav.contact')}</Link>
+            </p>
+          </section>
+        </div>
       </div>
-
-      <AdSlot height="100px" />
-    </div>
+    </main>
   );
 }

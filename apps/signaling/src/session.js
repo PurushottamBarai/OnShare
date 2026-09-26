@@ -1,4 +1,4 @@
-import { parseAndValidateMessage, ERROR_CODES } from '@shareport/protocol';
+import { parseAndValidateMessage, ERROR_CODES } from '@onshare/protocol';
 import { sendWsMessage, createWebSocketResponse } from './utils.js';
 import { generateIceServers } from './turn.js';
 
@@ -98,6 +98,7 @@ export class Session {
 
   async setupSenderSocket(serverWs, sessionId, senderToken, url) {
     this.sessionId = sessionId || this.sessionId || `sess_${crypto.randomUUID().slice(0, 8)}`;
+    this.workerNamespace = url.searchParams.get('workerNamespace') || process.env.TEST_WORKER_INDEX || 'default';
 
     // Reconnecting sender check (TRD 4.4: 60-second grace period)
     if (senderToken && this.senderToken) {
@@ -137,17 +138,8 @@ export class Session {
       this.sessionTimeout = setTimeout(() => {
         this.closeSession('session_expired');
       }, this.validityMinutes * 60 * 1000);
+      this.sessionTimeout.unref();
     }
-
-    // Generate ICE servers for sender
-    const iceServers = await generateIceServers(this.sessionId, this.env);
-
-    // Send session.created to sender
-    sendWsMessage(serverWs, 'session.created', {
-      sessionId: this.sessionId,
-      senderToken: this.senderToken,
-      iceServers,
-    });
 
     serverWs.addEventListener('message', async (event) => {
       try {
@@ -161,6 +153,16 @@ export class Session {
       }
     });
 
+    // Generate ICE servers for sender
+    const iceServers = await generateIceServers(this.sessionId, this.env);
+
+    // Send session.created to sender
+    sendWsMessage(serverWs, 'session.created', {
+      sessionId: this.sessionId,
+      senderToken: this.senderToken,
+      iceServers,
+    });
+
     serverWs.addEventListener('close', () => {
       this.senderSocket = null;
       if (this.sessionState !== 'CLOSED') {
@@ -171,6 +173,7 @@ export class Session {
             this.closeSession('sender_left');
           }
         }, 60 * 1000);
+        this.senderGraceTimeout.unref();
       }
     });
   }
@@ -308,7 +311,10 @@ export class Session {
     }
 
     const iceServers = await generateIceServers(this.sessionId, this.env);
-    const otpRoomId = this.env.OTP_ROOM.idFromName(code);
+    const otpKey = this.workerNamespace && this.workerNamespace !== 'default'
+      ? `${this.workerNamespace}:${code}`
+      : code;
+    const otpRoomId = this.env.OTP_ROOM.idFromName(otpKey);
     const otpStub = this.env.OTP_ROOM.get(otpRoomId);
 
     const consumeResponse = await otpStub.fetch(new Request('http://internal/consume', {

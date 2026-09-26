@@ -43,6 +43,11 @@ export class TextSession {
         }
       }
     });
+
+    if (typeof window !== 'undefined') {
+      window.__activeTextSessions = window.__activeTextSessions || new Set();
+      window.__activeTextSessions.add(this);
+    }
   }
 
   getText() {
@@ -111,28 +116,61 @@ export class TextSession {
       this.handleIncomingBinary(peerId, new Uint8Array(event.data));
     };
 
-    if (this.role === 'sender') {
-      // Sender is hub: send current document state to newly joined receiver
-      const fullState = Y.encodeStateAsUpdate(this.ydoc);
-      if (fullState.byteLength > 0) {
-        this.sendToPeer(peerId, MSG_SYNC_STEP_2, fullState);
-      }
-
-      // Send initial edit permissions
-      if (controlChannel?.readyState === 'open') {
+    if (controlChannel) {
+      // Listen to control channel messages (like text.canEdit)
+      const onMsg = (event) => {
         try {
-          controlChannel.send(JSON.stringify({
-            type: 'text.canEdit',
-            canEdit: this.canEdit,
-          }));
+          const data = JSON.parse(event.data);
+          this.handleControlMessage(data);
         } catch {
           // ignore
         }
+      };
+      if (typeof controlChannel.addEventListener === 'function') {
+        controlChannel.addEventListener('message', onMsg);
+      } else {
+        controlChannel.onmessage = onMsg;
+      }
+    }
+
+    if (this.role === 'sender') {
+      const sendInitialState = () => {
+        // Sender is hub: send current document state to newly joined receiver
+        const fullState = Y.encodeStateAsUpdate(this.ydoc);
+        if (fullState.byteLength > 0) {
+          this.sendToPeer(peerId, MSG_SYNC_STEP_2, fullState);
+        }
+
+        // Send initial edit permissions
+        if (controlChannel?.readyState === 'open') {
+          try {
+            controlChannel.send(JSON.stringify({
+              type: 'text.canEdit',
+              canEdit: this.canEdit,
+            }));
+          } catch {
+            // ignore
+          }
+        }
+      };
+
+      if (textChannel.readyState === 'open') {
+        sendInitialState();
+      } else {
+        textChannel.addEventListener('open', sendInitialState);
       }
     } else {
       // Receiver connects: send state vector to hub to request missing diffs
-      const sv = Y.encodeStateVector(this.ydoc);
-      this.sendToPeer(peerId, MSG_SYNC_STEP_1, sv);
+      const sendInitialState = () => {
+        const sv = Y.encodeStateVector(this.ydoc);
+        this.sendToPeer(peerId, MSG_SYNC_STEP_1, sv);
+      };
+      
+      if (textChannel.readyState === 'open') {
+        sendInitialState();
+      } else {
+        textChannel.addEventListener('open', sendInitialState);
+      }
     }
   }
 
@@ -151,6 +189,21 @@ export class TextSession {
         // Received remote state vector; respond with diff
         const diff = Y.encodeStateAsUpdate(this.ydoc, payload);
         this.sendToPeer(peerId, MSG_SYNC_STEP_2, diff);
+        
+        // Also ensure the peer knows the current edit permissions
+        if (this.role === 'sender') {
+          const peer = this.peers.get(peerId);
+          if (peer?.controlChannel?.readyState === 'open') {
+            try {
+              peer.controlChannel.send(JSON.stringify({
+                type: 'text.canEdit',
+                canEdit: this.canEdit,
+              }));
+            } catch {
+              // ignore
+            }
+          }
+        }
         break;
       }
 
@@ -234,6 +287,9 @@ export class TextSession {
   }
 
   destroy() {
+    if (typeof window !== 'undefined' && window.__activeTextSessions) {
+      window.__activeTextSessions.delete(this);
+    }
     this.ydoc.destroy();
     this.peers.clear();
   }

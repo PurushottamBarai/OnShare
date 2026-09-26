@@ -1,0 +1,34 @@
+{
+  "nav": {
+    "send": "Αποστολή",
+    "receive": "Λήψη",
+    "textLive": "Κείμενο σε ζωντανή μετάδοση",
+    "contact": "Επικοινωνία"
+  },
+  "footer": {
+    "tagline": "Μοιραστείτε αρχεία και κείμενο άμεσα, με ασφάλεια και χωρίς εγγραφή",
+    "howItWorks": "Πώς Λειτουργεί",
+    "privacyPolicy": "Πολιτική Aπορρήτου",
+    "termsOfUse": "Όροι χρήσης",
+    "contact": "Επικοινωνία",
+    "feedback": "Σχόλια"
+  },
+  "status": {
+    "waitingForPeer": "Αναμονή για",
+    "connecting": "Σύνδεση",
+    "transferring": "Μεταφορά...",
+    "complete": "Ολοκληρώθηκε",
+    "disconnected": "Αποσυνδέθηκε",
+    "error": "Σφάλμα"
+  },
+  "home": {
+    "title": "Αποστολή αρχείων",
+    "receiveTitle": "Λήψη αρχείων",
+    "textTitle": "Κείμενο σε ζωντανή μετάδοση"
+  },
+  "common": {
+    "loading": "Φόρτωση...",
+    "advertisement": "Διαφήμιση",
+    "reservedSponsorship": "Χώρος Δεσμευμένης Χορηγίας (Μη παρεμβατικός)"
+  }
+}

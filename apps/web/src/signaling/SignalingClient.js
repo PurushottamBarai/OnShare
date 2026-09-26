@@ -1,4 +1,4 @@
-import { parseAndValidateMessage, serializeMessage } from '@shareport/protocol';
+import { parseAndValidateMessage, serializeMessage } from '@onshare/protocol';
 
 /**
  * SignalingClient (TRD Section 9 & 12)
@@ -62,13 +62,26 @@ export class SignalingClient {
     }
   }
 
+  getWorkerIndex() {
+    if (typeof window !== 'undefined') {
+      return (
+        window.__TEST_WORKER_INDEX__ ||
+        new URLSearchParams(window.location.search).get('workerIndex') ||
+        (document.cookie.match(/(?:^|;\s*)test_worker_index=([^;]+)/)?.[1]) ||
+        ''
+      );
+    }
+    return '';
+  }
+
   /**
    * Connect as Receiver (HM-1, RC-1)
    */
   connectReceiver() {
     this.role = 'receiver';
     this.isManualClose = false;
-    const url = `${this.baseUrl}/receiver`;
+    const workerIndex = this.getWorkerIndex();
+    const url = `${this.baseUrl}/receiver${workerIndex ? `?workerIndex=${workerIndex}` : ''}`;
     this.openSocket(url);
   }
 
@@ -84,6 +97,10 @@ export class SignalingClient {
     if (this.sessionId && this.senderToken) {
       params.set('sessionId', this.sessionId);
       params.set('senderToken', this.senderToken);
+    }
+    const workerIndex = this.getWorkerIndex();
+    if (workerIndex) {
+      params.set('workerIndex', workerIndex);
     }
     const url = `${this.baseUrl}/session?${params.toString()}`;
     this.openSocket(url);
@@ -200,7 +217,9 @@ export class SignalingClient {
    */
   joinSession(sessionId, joinToken) {
     if (!this.pendingJoinMessages) this.pendingJoinMessages = [];
-    const url = `${this.baseUrl}/join?sessionId=${sessionId}&joinToken=${joinToken}`;
+    const workerIndex = this.getWorkerIndex();
+    const workerParam = workerIndex ? `&workerIndex=${workerIndex}` : '';
+    const url = `${this.baseUrl}/join?sessionId=${sessionId}&joinToken=${joinToken}${workerParam}`;
     this.joinSocket = new WebSocket(url);
 
     this.joinSocket.addEventListener('open', () => {
@@ -316,6 +335,7 @@ export class SignalingClient {
         this.send('ping', {});
       }
     }, 20 * 1000);
+    if (this.heartbeatInterval?.unref) this.heartbeatInterval.unref();
   }
 
   stopHeartbeat() {
@@ -342,6 +362,7 @@ export class SignalingClient {
         this.connectSender();
       }
     }, delay);
+    if (this.reconnectTimer?.unref) this.reconnectTimer.unref();
   }
 
   cleanSocket(ws) {

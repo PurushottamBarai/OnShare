@@ -27,6 +27,11 @@ export class PeerManager {
     this.dataChannel = null;
     this.textChannel = null;
     this.state = 'CONNECTING'; // 'CONNECTING' | 'WAITING_ACCEPT' | 'ACCEPTED' | 'TRANSFERRING' | 'DONE' | 'DECLINED' | 'FAILED' | 'CLOSED'
+
+    if (typeof window !== 'undefined') {
+      window.__activePeerManagers = window.__activePeerManagers || new Set();
+      window.__activePeerManagers.add(this);
+    }
   }
 
   setState(newState, details = null) {
@@ -212,6 +217,9 @@ export class PeerManager {
   }
 
   close() {
+    if (typeof window !== 'undefined' && window.__activePeerManagers) {
+      window.__activePeerManagers.delete(this);
+    }
     if (this.controlChannel) {
       try { this.controlChannel.close(); } catch { /* ignore */ }
       this.controlChannel = null;

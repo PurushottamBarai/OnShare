@@ -1,16 +1,18 @@
 import { test, expect } from '@playwright/test';
 
 const routes = [
-  { path: '/', testId: 'route-home' },
-  { path: '/send', testId: 'route-send' },
-  { path: '/receive', testId: 'route-receive' },
-  { path: '/text', testId: 'route-text' },
-  { path: '/how-it-works', testId: 'route-how-it-works' },
-  { path: '/privacy', testId: 'route-privacy' },
-  { path: '/terms', testId: 'route-terms' },
-  { path: '/contact', testId: 'route-contact' },
-  { path: '/report-abuse', testId: 'route-report-abuse' },
-  { path: '/components', testId: 'route-components' },
+  { path: '/', testId: 'route-dashboard' },
+  { path: '/send', testId: 'route-dashboard' },
+  { path: '/receive', testId: 'route-dashboard' },
+  { path: '/text', testId: 'route-dashboard' },
+];
+
+const staticRoutes = [
+  '/how-it-works',
+  '/privacy',
+  '/terms',
+  '/contact',
+  '/components',
 ];
 
 test.describe('Route shell placeholder rendering', () => {
@@ -21,25 +23,32 @@ test.describe('Route shell placeholder rendering', () => {
       await expect(element).toBeVisible();
     });
   }
+
+  for (const path of staticRoutes) {
+    test(`renders route shell placeholder for ${path}`, async ({ page }) => {
+      await page.goto(path);
+      await expect(page.locator('main').first()).toBeVisible();
+    });
+  }
 });
 
-test.describe('Home Screen & Theme Verification (UI Brief Section 3 & 4.1)', () => {
-  test('renders 3 primary cards, 3-step strip, ad slot, and supports mobile responsive layout', async ({ page }) => {
+test.describe('Home Screen & Theme Verification', () => {
+  test('renders tabbed interface for send, receive, and text modes, and supports mobile layout', async ({ page }) => {
     // Desktop Viewport
     await page.setViewportSize({ width: 1024, height: 768 });
     await page.goto('/');
 
-    await expect(page.locator('[data-testid="home-card-send"]')).toBeVisible();
-    await expect(page.locator('[data-testid="home-card-text"]')).toBeVisible();
-    await expect(page.locator('[data-testid="home-card-receive"]')).toBeVisible();
-    await expect(page.locator('text=How SharePort Works')).toBeVisible();
-    await expect(page.locator('[data-testid="ad-slot"]')).toBeVisible();
+    await expect(page.locator('[data-testid="route-dashboard"]')).toBeVisible();
+    await expect(page.locator('[data-testid="route-dashboard"] a[href="/send"]:visible')).toBeVisible();
+    await expect(page.locator('[data-testid="route-dashboard"] a[href="/receive"]:visible')).toBeVisible();
+    await expect(page.locator('[data-testid="route-dashboard"] a[href="/text"]:visible')).toBeVisible();
 
     // Mobile Viewport (HM-2 breakpoint <= 640px)
     await page.setViewportSize({ width: 375, height: 667 });
-    await expect(page.locator('[data-testid="home-card-send"]')).toBeVisible();
-    await expect(page.locator('[data-testid="home-card-text"]')).toBeVisible();
-    await expect(page.locator('[data-testid="home-card-receive"]')).toBeVisible();
+    await expect(page.locator('[data-testid="route-dashboard"]')).toBeVisible();
+    await expect(page.locator('[data-testid="route-dashboard"] a[href="/send"]:visible')).toBeVisible();
+    await expect(page.locator('[data-testid="route-dashboard"] a[href="/receive"]:visible')).toBeVisible();
+    await expect(page.locator('[data-testid="route-dashboard"] a[href="/text"]:visible')).toBeVisible();
   });
 
   test('toggles between dark and light themes smoothly', async ({ page }) => {

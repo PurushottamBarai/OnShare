@@ -10,31 +10,20 @@ import LockoutBanner from '../src/components/LockoutBanner.jsx';
 import AdSlot from '../src/components/AdSlot.jsx';
 
 describe('Home Screen & Shared UI Components (UI Brief sections 3 & 4.1)', () => {
-  it('renders Home screen with three primary action cards and 3-step strip', () => {
+  it('renders Home screen dashboard container and tab navigation', () => {
     render(
       <MemoryRouter>
         <Home />
       </MemoryRouter>
     );
 
-    // Verify 3 primary action cards (HM-1, HM-2)
-    expect(screen.getByTestId('home-card-send')).toBeDefined();
-    expect(screen.getByTestId('home-card-text')).toBeDefined();
-    expect(screen.getByTestId('home-card-receive')).toBeDefined();
+    // Verify dashboard container
+    expect(screen.getByTestId('route-dashboard')).toBeDefined();
 
-    // Verify card titles
-    expect(screen.getByText('Send')).toBeDefined();
-    expect(screen.getByText('Share Text')).toBeDefined();
-    expect(screen.getAllByText('Receive').length).toBeGreaterThanOrEqual(1);
-
-    // Verify 3-step how-it-works strip (HM-3)
-    expect(screen.getByText('How SharePort Works')).toBeDefined();
-    expect(screen.getByText('Receiver Gets Code')).toBeDefined();
-    expect(screen.getByText('Share Code')).toBeDefined();
-    expect(screen.getByText('Sender Sends')).toBeDefined();
-
-    // Verify ad slot below cards (AD-1)
-    expect(screen.getByTestId('ad-slot')).toBeDefined();
+    // Verify 3 mode navigation links
+    expect(screen.getByRole('link', { name: /send/i })).toBeDefined();
+    expect(screen.getByRole('link', { name: /receive/i })).toBeDefined();
+    expect(screen.getByRole('link', { name: /text/i })).toBeDefined();
   });
 
   describe('StatusPill Component', () => {

@@ -1,0 +1,34 @@
+{
+  "nav": {
+    "send": "Gửi",
+    "receive": "Nhận",
+    "textLive": "Nhắn tin trực tiếp",
+    "contact": "Danh bạ"
+  },
+  "footer": {
+    "tagline": "Chia sẻ tệp và văn bản ngay lập tức, an toàn và không cần đăng ký",
+    "howItWorks": "Cách thức hoạt động",
+    "privacyPolicy": "Chính sách quyền riêng tư",
+    "termsOfUse": "Điều Khoản Sử Dụng",
+    "contact": "Danh bạ",
+    "feedback": "Phản hồi"
+  },
+  "status": {
+    "waitingForPeer": "Đang chờ bạn bè",
+    "connecting": "Đang kết nối",
+    "transferring": "Đang chuyển",
+    "complete": "Hoàn thành",
+    "disconnected": "Đã ngắt kết nối",
+    "error": "Lỗi"
+  },
+  "home": {
+    "title": "Gửi tệp",
+    "receiveTitle": "Nhận tệp",
+    "textTitle": "Nhắn tin trực tiếp"
+  },
+  "common": {
+    "loading": "Đang tải...",
+    "advertisement": "Quảng cáo",
+    "reservedSponsorship": "Không gian tài trợ dành riêng (Không xâm phạm)"
+  }
+}

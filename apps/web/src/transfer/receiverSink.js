@@ -40,12 +40,12 @@ export class ReceiverSink {
 
   determineFilename() {
     if (this.isZip) {
-      return this.manifest.zipFilename || 'SharePort-Archive.zip';
+      return this.manifest.zipFilename || 'OnShare-Archive.zip';
     }
     if (this.manifest.files && this.manifest.files.length === 1) {
       return sanitizeFilename(this.manifest.files[0].name);
     }
-    return 'SharePort-Download';
+    return 'OnShare-Download';
   }
 
   /**

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import worker, { OtpRoom, Session, Limiter } from '../src/index.js';
-import { ERROR_CODES, parseAndValidateMessage, serializeMessage } from '@shareport/protocol';
+import { ERROR_CODES, parseAndValidateMessage, serializeMessage } from '@onshare/protocol';
 
 /**
  * Mock WebSocket pair for Vitest Node / jsdom environment

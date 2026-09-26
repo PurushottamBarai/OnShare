@@ -1,0 +1,34 @@
+{
+  "nav": {
+    "send": "Hantar",
+    "receive": "Terima",
+    "textLive": "Teks Secara Langsung",
+    "contact": "Hubungi kami"
+  },
+  "footer": {
+    "tagline": "Kongsi fail dan teks dengan serta-merta, selamat dan tanpa pendaftaran",
+    "howItWorks": "Bagaimana Ia Berfungsi",
+    "privacyPolicy": "Dasar Privasi",
+    "termsOfUse": "Terma Penggunaan",
+    "contact": "Hubungi kami",
+    "feedback": "Maklum balas"
+  },
+  "status": {
+    "waitingForPeer": "Menunggu rakan sebaya",
+    "connecting": "Sedang menyambung",
+    "transferring": "Memindahkan",
+    "complete": "Selesai",
+    "disconnected": "Terputus",
+    "error": "Ralat"
+  },
+  "home": {
+    "title": "Hantar Fail...",
+    "receiveTitle": "Terima Fail",
+    "textTitle": "Teks Secara Langsung"
+  },
+  "common": {
+    "loading": "Muat...",
+    "advertisement": "Iklan",
+    "reservedSponsorship": "Ruang Tajaan Simpanan (Tidak mengganggu)"
+  }
+}

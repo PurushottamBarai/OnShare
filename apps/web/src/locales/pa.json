@@ -1,0 +1,135 @@
+{
+  "nav": {
+    "send": "ਭੇਜੋ",
+    "receive": "à¨«à¨¿à¨²à¨à¨° à¨¸à©à¨à¨¿à©°à¨",
+    "textLive": "ਟੈਕਸਟ ਲਾਈਵ",
+    "contact": "ਸੰਪਰਕ"
+  },
+  "footer": {
+    "tagline": "ਫਾਈਲਾਂ ਅਤੇ ਟੈਕਸਟ ਨੂੰ ਤੁਰੰਤ, ਸੁਰੱਖਿਅਤ, ੰਗ ਨਾਲ ਅਤੇ ਬਿਨਾਂ ਸਾਈਨ ਅਪ ਕੀਤੇ ਸਾਂਝਾ ਕਰੋ",
+    "howItWorks": "ਇਹ ਕਿਵੇਂ ਕੰਮ ਕਰਦਾ ਹੈ",
+    "privacyPolicy": "ਗੋਪਨੀਯਤਾ ਨੀਤੀ",
+    "termsOfUse": "ਵਰਤੋਂ ਦੀਆਂ ਸ਼ਰਤਾਂ",
+    "contact": "ਸੰਪਰਕ",
+    "feedback": "ਸੁਝਾਅ"
+  },
+  "status": {
+    "waitingForPeer": "ਸਾਥੀ ਦੀ ਉਡੀਕ ਕੀਤੀ ਜਾ ਰਹੀ ਹੈ",
+    "connecting": "ਕੁਨੈਕਟ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ",
+    "transferring": "ਟਰਾਂਸਫਰ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ@ title job",
+    "complete": "ਪੂਰਾ ਕਰੋ",
+    "disconnected": "ਡਿਸ- ਕੁਨਕੈਟ ਹੈComment",
+    "error": "ਗਲਤੀ"
+  },
+  "home": {
+    "title": "ਫਾਇਲਾਂ ਭੇਜੋ",
+    "receiveTitle": "ਫਾਇਲਾਂ ਪ੍ਰਾਪਤ ਕਰੋ",
+    "textTitle": "ਟੈਕਸਟ ਲਾਈਵ"
+  },
+  "common": {
+    "loading": "...ਲੋਡ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ",
+    "advertisement": "ਇਸ਼ਤਿਹਾਰਬਾਜ਼ੀ",
+    "reservedSponsorship": "ਰਿਜ਼ਰਵਡ ਸਪਾਂਸਰਸ਼ਿਪ ਸਪੇਸ (ਗੈਰ-ਦਖਲਅੰਦਾਜ਼ੀ)",
+    "connect": "ਕਨੈਕਟ ਕਰੋ",
+    "disconnect": "ਡਿਸ-ਕੁਨੈਕਟ",
+    "cancel": "ਰੱਦ ਕਰੋ",
+    "save": "ਸੇਵ ਕਰੋ",
+    "copy": "ਕਾਪੀ"
+  },
+  "dashboard": {
+    "addFiles": "ਸ਼ਾਮਿਲ ਫਾਇਲ਼",
+    "noFilesAdded": "ਕੋਈ ਫਾਈਲਾਂ ਸ਼ਾਮਲ ਨਹੀਂ ਕੀਤੀਆਂ ਗਈਆਂ ।",
+    "orDropFilesHere": "ਜਾਂ ਫਾਇਲਾਂ ਇੱਥੇ ਸੁੱਟੋ",
+    "codeValidity": "ਕੋਡ ਵੈਧਤਾ",
+    "receiverCode": "ਪ੍ਰਾਪਤ ਕਰਨ ਵਾਲਾ ਕੋਡ",
+    "enterReceiveCode": "6-ਅੰਕਾਂ ਦਾ ਪ੍ਰਾਪਤ ਕੋਡ ਦਰਜ ਕਰੋ",
+    "yourDeviceName": "ਤੁਹਾਡੀ ਡਿਵਾਈਸ ਦਾ ਨਾਮਃ",
+    "yourReceiveCode": "ਤੁਹਾਡਾ ਰਸੀਦ ਕੋਡ",
+    "waitingForSender": "ਭੇਜਣ ਵਾਲੇ ਦੀ ਉਡੀਕ ਕੀਤੀ ਜਾ ਰਹੀ ਹੈ...",
+    "downloads": "ਡਾਊਨਲੋਡ",
+    "typeOrPasteText": "ਟੈਕਸਟ ਇੱਥੇ ਟਾਈਪ ਜਾਂ ਪੇਸਟ ਕਰੋ...",
+    "saveAsTxt": ".txt ਵਾਂਗ ਸੰਭਾਲੋ",
+    "sendViaShareCode": "ਸ਼ੇਅਰ ਕੋਡ ਰਾਹੀਂ ਭੇਜੋ...",
+    "selectValidCode": "ਕਿਰਪਾ ਕਰਕੇ ਇੱਕ ਵੈਧ 6-ਅੰਕਾਂ ਦਾ ਕੋਡ ਦਰਜ ਕਰੋ ।",
+    "peerDisconnected": "ਪੀਅਰ ਡਿਸ- ਕੁਨੈਕਟ ਹੋ ਗਿਆ ਹੈ ।",
+    "connectionFailed": "à¨à©à¨¨à©à¨à¨¸à¨¼à¨¨ à¨«à©à¨²à©à¨¹ à¨¹à©à¨à¨"
+  },
+  "consent": {
+    "message": "ਅਸੀਂ ਤੁਹਾਡੀ ਪਸੰਦ ਨੂੰ ਬਚਾਉਣ ਲਈ ਸਥਾਨਕ ਸਟੋਰੇਜ ਦੀ ਵਰਤੋਂ ਕਰਦੇ ਹਾਂ. ਕੋਈ ਟਰੈਕਿੰਗ ਕੂਕੀਜ਼ ਨਹੀਂ ਵਰਤੀਆਂ ਜਾਂਦੀਆਂ.",
+    "accept": "ਸਵੀਕਾਰ ਕਰੋ",
+    "decline": "ਇਨਕਾਰ",
+    "title": "Your Privacy on OnShare"
+  },
+  "howItWorks": {
+    "title": "How OnShare Works",
+    "subtitle": "Reversed OTP verification and direct browser-to-browser WebRTC streaming. No uploads, no cloud storage, no account required.",
+    "step1Title": "Receiver Generates Code",
+    "step1Desc": "The receiver taps Receive to generate a unique 6-digit access code valid for 10 minutes.",
+    "step2Title": "Sender Enters Code",
+    "step2Desc": "The receiver shares the code. The sender enters it to approve connection and sends a preview manifest.",
+    "step3Title": "Direct P2P Stream",
+    "step3Desc": "Receiver reviews file details and taps Accept. Encrypted data streams browser-to-browser with zero server storage.",
+    "archTitle": "The Architecture Behind OnShare",
+    "arch1Title": "Reversed Access Code (The Security Gate)",
+    "arch1Desc": "Unlike traditional tools where the sender issues a link that anyone can open if overheard, OnShare reverses the flow: the receiver generates the code, and the sender must explicitly type it in. Even with a code, nothing is sent until the sender approves and the receiver reviews the incoming manifest.",
+    "arch2Title": "Live Streaming ZIP Packaging",
+    "arch2Desc": "When multiple files are shared, OnShare packages them on the fly into an uncompressed ZIP archive using streaming chunk reads. The sender's browser never buffers multi-gigabyte archives into RAM, keeping memory flat and constant.",
+    "arch3Title": "Conflict-Free Live Text (Yjs CRDTs)",
+    "arch3Desc": "In Share Text mode, participants edit a shared plain-text document in real time. Changes are merged deterministically using Conflict-free Replicated Data Types (CRDTs) over WebRTC text data channels without central coordination."
+  },
+  "contactPage": {
+    "title": "Contact",
+    "desc1": "Have questions or need help with OnShare or our services? Use email:",
+    "desc2": "to reach out and we will be in touch with you as quickly as possible. For specific issues, make use of the following POCs for faster redressal."
+  },
+  "feedbackPage": {
+    "title": "Feedback",
+    "subtitle": "We'd love to hear your thoughts, suggestions, or reports to make OnShare even better.",
+    "successTitle": "Thanks for your feedback!",
+    "successDesc": "Your message has been sent successfully. We appreciate you taking the time to help improve OnShare.",
+    "sendAnother": "Send Another Message",
+    "networkError": "Network error. Please check your connection and try again.",
+    "yourName": "Your Name",
+    "yourNamePlaceholder": "e.g. Alex",
+    "yourMessage": "Your Message / Feedback",
+    "yourMessagePlaceholder": "Tell us what you like, what is broken, or features you would like to see...",
+    "sending": "Sending...",
+    "submit": "Submit Feedback"
+  },
+  "termsPage": {
+    "title": "Terms of Use",
+    "subtitle": "Effective date: September 2026 • Acceptable Use & Guidelines",
+    "h1": "1. Acceptance of Terms",
+    "p1": "By using OnShare, you agree to comply with and be bound by these Terms of Use. If you do not agree to these terms, please discontinue use of the service immediately.",
+    "h2": "2. Service Description",
+    "p2": "OnShare provides temporary browser-to-browser WebRTC data transmission and real-time live text collaboration without server-side file hosting or user accounts. Both sender and receiver must be online simultaneously for data transfer to succeed.",
+    "h3": "3. Acceptable Use Policy",
+    "p3": "You agree not to use OnShare for any unlawful purpose. Strictly prohibited activities include:",
+    "li1": "Transmitting malware, viruses, trojans, ransomware, or malicious scripts.",
+    "li2": "Distributing infringing copyright material or intellectual property without authorization.",
+    "li3": "Sharing harmful, exploitative, threatening, or harassing content.",
+    "li4": "Attempting to brute-force 6-digit access codes or bypass rate limiting mechanisms.",
+    "h4": "4. Limitation of Liability and Disclaimer",
+    "p4": "OnShare is provided on an \"AS IS\" and \"AS AVAILABLE\" basis without warranties of any kind. Because OnShare does not inspect or store user content, the sender and receiver are solely responsible for verifying the authenticity and safety of files exchanged."
+  },
+  "privacyPage": {
+    "title": "Privacy Policy",
+    "subtitle": "Last updated: September 2026 • Privacy by Architecture",
+    "h1": "1. Our Core Principle: Zero Content Storage",
+    "p1": "OnShare is built from the ground up so that your files, file names, and shared text never touch our disks or databases. All transfers stream directly from browser to browser using peer-to-peer WebRTC connections protected by DTLS encryption.",
+    "h2": "2. Ephemeral Signalling Data",
+    "p2": "To connect two browsers, our signalling coordination service relays session discovery messages:",
+    "li1a": "6-Digit Access Codes:",
+    "li1b": "Held strictly in volatile memory for at most 10 minutes and permanently discarded upon match or expiry.",
+    "li2a": "Session Identifiers:",
+    "li2b": "Random ephemeral tokens that expire when you close your tab or after your chosen session duration.",
+    "li3a": "WebRTC SDP & ICE Candidates:",
+    "li3b": "Connection metadata containing network addresses necessary to establish direct browser-to-browser peer connections.",
+    "h3": "3. Network Addresses and WebRTC",
+    "p3": "By nature of peer-to-peer WebRTC connections, each peer browser discovers the other peer's public network address to route packets directly. Local IP addresses are masked with mDNS hostnames. If a direct link fails and TURN relay is used, encrypted packets pass through the relay server without the relay possessing decryption keys.",
+    "h4": "4. No Accounts, No Cookies, No Tracking",
+    "p4": "OnShare requires no registration, email, or passwords. We do not store persistent tracking cookies or collect personally identifiable information (PII). We comply with modern privacy legislation including GDPR and India's Digital Personal Data Protection Act.",
+    "h5": "5. Contact and Inquiries",
+    "p5": "Questions regarding our privacy architecture? Visit our Contact page to reach out to us."
+  }
+}

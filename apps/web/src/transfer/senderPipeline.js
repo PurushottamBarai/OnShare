@@ -2,7 +2,7 @@ import { Zip, ZipPassThrough } from 'fflate';
 import { encodeFrame, DEFAULT_CHUNK_SIZE } from './frame.js';
 
 /**
- * Generate standard zip filename: SharePort-YYYYMMDD-HHMM.zip (PRD FL-2)
+ * Generate standard zip filename: OnShare-YYYYMMDD-HHMM.zip (PRD FL-2)
  */
 export function generateZipFilename(d = new Date()) {
   const pad = (n) => String(n).padStart(2, '0');
@@ -11,7 +11,7 @@ export function generateZipFilename(d = new Date()) {
   const DD = pad(d.getDate());
   const HH = pad(d.getHours());
   const mm = pad(d.getMinutes());
-  return `SharePort-${YYYY}${MM}${DD}-${HH}${mm}.zip`;
+  return `OnShare-${YYYY}${MM}${DD}-${HH}${mm}.zip`;
 }
 
 /**
@@ -27,7 +27,7 @@ export function sanitizeFilename(name) {
 /**
  * Deduplicate filenames (PRD FL-4)
  */
-export function deduplicateFilenames(files) {
+function deduplicateFilenames(files) {
   const seen = new Map();
   return files.map(file => {
     const clean = sanitizeFilename(file.name);

@@ -1,0 +1,34 @@
+{
+  "nav": {
+    "send": "Ipadala",
+    "receive": "Tumanggap",
+    "textLive": "Text Live",
+    "contact": "Makipag-ugnayan"
+  },
+  "footer": {
+    "tagline": "Magbahagi ng mga file at teksto agad-agad, ligtas, at walang pag-sign up",
+    "howItWorks": "Paano Ito Gumagana",
+    "privacyPolicy": "Patakaran sa Pagkapribado",
+    "termsOfUse": "Mga Tuntunin sa Paggamit",
+    "contact": "Makipag-ugnayan",
+    "feedback": "Feedback"
+  },
+  "status": {
+    "waitingForPeer": "Naghihintay para sa kapantay",
+    "connecting": "Kumokonekta",
+    "transferring": "Paglilipat",
+    "complete": "Kumpleto",
+    "disconnected": "Nawala sa koneksiyon",
+    "error": "Error"
+  },
+  "home": {
+    "title": "Magpadala ng mga File",
+    "receiveTitle": "Tumanggap ng mga File",
+    "textTitle": "Text Live"
+  },
+  "common": {
+    "loading": "Naglo-load...",
+    "advertisement": "Anunsyo",
+    "reservedSponsorship": "Nakareserbang Espasyo para sa Sponsorship (Hindi Nakakaabala)"
+  }
+}

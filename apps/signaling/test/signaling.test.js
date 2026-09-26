@@ -9,7 +9,7 @@ describe('Signaling Worker Scaffold', () => {
 
     const body = await response.json();
     expect(body.status).toBe('ok');
-    expect(body.service).toBe('shareport-signaling');
+    expect(body.service).toBe('onshare-signaling');
   });
 
   it('handles default root path', async () => {
@@ -17,6 +17,6 @@ describe('Signaling Worker Scaffold', () => {
     const response = await worker.fetch(request, {}, {});
     expect(response.status).toBe(200);
     const text = await response.text();
-    expect(text).toContain('SharePort Signaling Service');
+    expect(text).toContain('OnShare Signaling Service');
   });
 });

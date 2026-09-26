@@ -3,8 +3,8 @@ import { SignalingClient } from '../signaling/SignalingClient.js';
 import { PeerManager } from '../webrtc/PeerManager.js';
 import { generateDeviceLabel } from '../utils/deviceLabel.js';
 import { SenderPipeline, generateZipFilename } from '../transfer/senderPipeline.js';
-import StatusPill from './StatusPill.jsx';
 import LockoutBanner from './LockoutBanner.jsx';
+import { useTranslation } from 'react-i18next';
 
 function formatBytes(bytes) {
   if (!bytes || bytes === 0) return '0 B';
@@ -15,9 +15,10 @@ function formatBytes(bytes) {
 }
 
 export default function DashboardSend() {
+  const { t } = useTranslation();
   const [files, setFiles] = useState([]);
   const [validity, setValidity] = useState(30);
-  const [sessionActive, setSessionActive] = useState(false);
+  const [, setSessionActive] = useState(false);
   const [, setSessionId] = useState(null);
   const [codeEntry, setCodeEntry] = useState('');
   const [receivers, setReceivers] = useState([]);
@@ -37,7 +38,7 @@ export default function DashboardSend() {
   }, [files]);
 
   const ensureSession = () => {
-    if (signalingRef.current && sessionActive) return;
+    if (signalingRef.current) return;
     const client = new SignalingClient();
     signalingRef.current = client;
 
@@ -155,10 +156,13 @@ export default function DashboardSend() {
   }, [lockoutSeconds]);
 
   useEffect(() => {
+    const pipelines = senderPipelinesRef.current;
+    const peers = peerManagersRef.current;
+    const signaling = signalingRef.current;
     return () => {
-      senderPipelinesRef.current.forEach(p => p.cancel());
-      peerManagersRef.current.forEach(pm => pm.close());
-      signalingRef.current?.close();
+      pipelines.forEach(p => p.cancel());
+      peers.forEach(pm => pm.close());
+      signaling?.close();
     };
   }, []);
 
@@ -230,7 +234,7 @@ export default function DashboardSend() {
           <svg className="w-5 h-5 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
           </svg>
-          <span>Send</span>
+          <span>{t('nav.send')}</span>
         </div>
         <span className="text-xs text-text-secondary font-medium">Max 10GB</span>
       </div>
@@ -253,7 +257,7 @@ export default function DashboardSend() {
               </svg>
             </div>
             <p className={`font-semibold text-sm transition-colors duration-300 ${isDragging ? 'text-accent-primary' : 'text-text-primary'}`}>
-              {isDragging ? 'Drop files here!' : 'Browse or Drag & drop files'}
+              {isDragging ? t('dashboard.orDropFilesHere') : t('dashboard.addFiles')}
             </p>
             <p className="text-xs text-text-secondary mt-1">Direct peer transfer link</p>
           </>
@@ -263,7 +267,7 @@ export default function DashboardSend() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
             </svg>
             <p className={`font-semibold text-sm transition-colors duration-300 ${isDragging ? 'text-accent-primary' : 'text-text-primary'}`}>
-              {isDragging ? 'Drop more files here!' : 'Add more files'}
+              {isDragging ? t('dashboard.orDropFilesHere') : t('dashboard.addFiles')}
             </p>
           </div>
         )}
@@ -273,7 +277,7 @@ export default function DashboardSend() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Expiry:</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">{t('dashboard.codeValidity')}:</span>
               <div className="flex rounded border border-border-subtle overflow-hidden text-xs font-medium">
                 {[2, 5, 30].map(m => (
                   <button
@@ -342,7 +346,7 @@ export default function DashboardSend() {
             maxLength={6}
             value={codeEntry}
             onChange={(e) => setCodeEntry(e.target.value.replace(/\D/g, ''))}
-            placeholder="Receiver Code"
+            placeholder={t('dashboard.receiverCode')}
             disabled={lockoutSeconds > 0}
             className="flex-1 px-4 py-2.5 rounded-l bg-bg-elevated border border-r-0 border-border-subtle focus:border-accent-primary text-text-primary font-mono text-sm tracking-widest placeholder:tracking-normal placeholder:font-sans focus:outline-none"
           />

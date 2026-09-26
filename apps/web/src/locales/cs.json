@@ -1,0 +1,34 @@
+{
+  "nav": {
+    "send": "Odeslat",
+    "receive": "Přijmout",
+    "textLive": "Text Live",
+    "contact": "Kontakt"
+  },
+  "footer": {
+    "tagline": "Sdílejte soubory a textové zprávy okamžitě, bezpečně a bez registrace",
+    "howItWorks": "Jak to funguje",
+    "privacyPolicy": "Zásady ochrany osobních údajů",
+    "termsOfUse": "Podmínky používání",
+    "contact": "Kontakt",
+    "feedback": "Zpětná vazba"
+  },
+  "status": {
+    "waitingForPeer": "Čekání na kolegu",
+    "connecting": "Spojuji",
+    "transferring": "Probíhá přenos",
+    "complete": "Kompletní",
+    "disconnected": "Odpojeno",
+    "error": "Chyba"
+  },
+  "home": {
+    "title": "Envoyer des fichiers.",
+    "receiveTitle": "Receive files.",
+    "textTitle": "Text Live"
+  },
+  "common": {
+    "loading": "Načítání…",
+    "advertisement": "Inzerce",
+    "reservedSponsorship": "Rezervované místo pro sponzory (nerušivé)"
+  }
+}

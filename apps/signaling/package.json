@@ -1,5 +1,5 @@
 {
-  "name": "@shareport/signaling",
+  "name": "@onshare/signaling",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,7 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@shareport/protocol": "*",
+    "@onshare/protocol": "*",
     "ws": "^8.21.3"
   },
   "devDependencies": {

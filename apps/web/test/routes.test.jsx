@@ -6,26 +6,26 @@ import App from '../src/App.jsx';
 
 describe('App Route Shells', () => {
   const routes = [
-    { path: '/', testId: 'route-home' },
-    { path: '/send', testId: 'route-send' },
-    { path: '/receive', testId: 'route-receive' },
-    { path: '/text', testId: 'route-text' },
-    { path: '/how-it-works', testId: 'route-how-it-works' },
-    { path: '/privacy', testId: 'route-privacy' },
-    { path: '/terms', testId: 'route-terms' },
-    { path: '/contact', testId: 'route-contact' },
-    { path: '/report-abuse', testId: 'route-report-abuse' },
+    { path: '/' },
+    { path: '/send' },
+    { path: '/receive' },
+    { path: '/text' },
+    { path: '/how-it-works' },
+    { path: '/privacy' },
+    { path: '/terms' },
+    { path: '/contact' },
+    { path: '/feedback' },
   ];
 
-  routes.forEach(({ path, testId }) => {
-    it(`renders placeholder for route ${path}`, async () => {
+  routes.forEach(({ path }) => {
+    it(`renders page for route ${path}`, async () => {
       render(
         <MemoryRouter initialEntries={[path]}>
           <App />
         </MemoryRouter>
       );
 
-      const el = await screen.findByTestId(testId);
+      const el = await screen.findByRole('main');
       expect(el).toBeDefined();
     });
   });

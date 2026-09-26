@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 /**
  * ConsentBanner Component (PRD AD-3)
@@ -6,11 +7,12 @@ import React, { useState, useEffect } from 'react';
  * Persists choice in localStorage. Never obscures core transfer controls or code display.
  */
 export default function ConsentBanner() {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const consent = localStorage.getItem('shareport-consent');
+      const consent = localStorage.getItem('onshare-consent');
       if (!consent) {
         setVisible(true);
       }
@@ -18,7 +20,7 @@ export default function ConsentBanner() {
   }, []);
 
   const handleChoice = (accepted) => {
-    localStorage.setItem('shareport-consent', accepted ? 'accepted' : 'rejected');
+    localStorage.setItem('onshare-consent', accepted ? 'accepted' : 'rejected');
     setVisible(false);
   };
 
@@ -34,10 +36,10 @@ export default function ConsentBanner() {
       <div className="max-w-content mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="text-xs text-text-secondary leading-relaxed">
           <p className="font-semibold text-text-primary text-sm mb-0.5">
-            Your Privacy on SharePort
+            {t('consent.title')}
           </p>
           <span>
-            We use essential local state and non-intrusive advertising to keep SharePort fast and free. No files, texts, or codes are ever stored on our servers.
+            {t('consent.message')}
           </span>
         </div>
 
@@ -47,14 +49,14 @@ export default function ConsentBanner() {
             data-testid="consent-reject-btn"
             className="px-3.5 py-1.5 text-xs font-medium rounded-button bg-bg-surface border border-border-subtle hover:border-accent-primary text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
           >
-            Reject Non-Essential
+            {t('consent.decline')}
           </button>
           <button
             onClick={() => handleChoice(true)}
             data-testid="consent-accept-btn"
             className="px-4 py-1.5 text-xs font-semibold rounded-button bg-accent-primary hover:bg-accent-hover text-bg-base cursor-pointer shadow-sm transition-colors"
           >
-            Accept All
+            {t('consent.accept')}
           </button>
         </div>
       </div>

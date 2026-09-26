@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { SignalingClient } from '../signaling/SignalingClient.js';
 import { PeerManager } from '../webrtc/PeerManager.js';
 import { ReceiverSink } from '../transfer/receiverSink.js';
-import { TextSession } from '../text/TextSession.js';
 import DeviceLabelChip from './DeviceLabelChip.jsx';
+import { useTranslation } from 'react-i18next';
 
 function formatBytes(bytes) {
   if (!bytes || bytes === 0) return '0 B';
@@ -14,6 +14,7 @@ function formatBytes(bytes) {
 }
 
 export default function DashboardReceive({ onTextSessionActive }) {
+  const { t } = useTranslation();
   const [code, setCode] = useState(null);
   const [receiverState, setReceiverState] = useState('CONNECTING');
   const [errorMessage, setErrorMessage] = useState(null);
@@ -21,7 +22,6 @@ export default function DashboardReceive({ onTextSessionActive }) {
   const [manifest, setManifest] = useState(null);
 
   const [transferProgress, setTransferProgress] = useState({ percent: 0, bytesReceived: 0, totalSize: 0, speedBps: 0, timeRemainingSec: 0 });
-  const [receivedFileResult, setReceivedFileResult] = useState(null);
 
   const signalingRef = useRef(null);
   const peerManagerRef = useRef(null);
@@ -32,7 +32,6 @@ export default function DashboardReceive({ onTextSessionActive }) {
     setReceiverState('CONNECTING');
     setErrorMessage(null);
     setManifest(null);
-    setReceivedFileResult(null);
     setTransferProgress({ percent: 0, bytesReceived: 0, totalSize: 0, speedBps: 0, timeRemainingSec: 0 });
 
     const client = new SignalingClient();
@@ -55,7 +54,7 @@ export default function DashboardReceive({ onTextSessionActive }) {
           setManifest(manifestData);
           setReceiverState('AWAITING_ACCEPT');
         },
-        onControlMessage: (ctrlMsg) => {
+        onControlMessage: () => {
           // If we need to pass this to the text session which is now handled by the dashboard text component?
           // Since the TextSession needs to be connected to this PeerManager's channels, 
           // we can just bubble this up via onTextSessionActive callback.
@@ -111,7 +110,9 @@ export default function DashboardReceive({ onTextSessionActive }) {
       await navigator.clipboard.writeText(code);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {}
+    } catch {
+      /* ignore error */
+    }
   };
 
   const handleRegenerate = () => {
@@ -125,31 +126,67 @@ export default function DashboardReceive({ onTextSessionActive }) {
     if (manifest?.mode === 'text') {
       peerManagerRef.current.acceptTransfer();
       setReceiverState('TEXT_ACTIVE');
-      if (onTextSessionActive) {
-        onTextSessionActive(peerManagerRef.current);
+
+      // Wait for text channel to be available (ondatachannel may not have
+      // fired for 'text' yet under load — race with control channel manifest)
+      const pm = peerManagerRef.current;
+      const notifyTextSession = () => {
+        if (onTextSessionActive) {
+          onTextSessionActive(pm);
+        }
+      };
+
+      if (pm.textChannel) {
+        notifyTextSession();
+      } else {
+        const poll = setInterval(() => {
+          if (pm.textChannel) {
+            clearInterval(poll);
+            notifyTextSession();
+          }
+        }, 20);
+        // Safety timeout: give up after 10s
+        setTimeout(() => clearInterval(poll), 10000);
       }
       return;
     }
 
-    const sink = new ReceiverSink({
-      manifest,
-      controlChannel: peerManagerRef.current.controlChannel,
-      dataChannel: peerManagerRef.current.dataChannel,
-      onProgress: (p) => setTransferProgress(p),
-      onComplete: (res) => {
-        setReceivedFileResult(res);
-        setReceiverState('DONE');
-      },
-      onError: (err) => {
-        setReceiverState('FAILED');
-        setErrorMessage(err.message || 'File transfer failed');
-      },
-    });
-    receiverSinkRef.current = sink;
+    // Wait for data channel to be available (ondatachannel may not have
+    // fired for 'data' yet under load — race with control channel manifest)
+    const pm = peerManagerRef.current;
+    const startTransfer = () => {
+      const sink = new ReceiverSink({
+        manifest,
+        controlChannel: pm.controlChannel,
+        dataChannel: pm.dataChannel,
+        onProgress: (p) => setTransferProgress(p),
+        onComplete: () => {
+          setReceiverState('DONE');
+        },
+        onError: (err) => {
+          setReceiverState('FAILED');
+          setErrorMessage(err.message || 'File transfer failed');
+        },
+      });
+      receiverSinkRef.current = sink;
 
-    await sink.initFileSystemTarget();
-    peerManagerRef.current.acceptTransfer();
-    setReceiverState('TRANSFERRING');
+      sink.initFileSystemTarget().then(() => {
+        pm.acceptTransfer();
+        setReceiverState('TRANSFERRING');
+      });
+    };
+
+    if (pm.dataChannel) {
+      startTransfer();
+    } else {
+      const poll = setInterval(() => {
+        if (pm.dataChannel) {
+          clearInterval(poll);
+          startTransfer();
+        }
+      }, 20);
+      setTimeout(() => clearInterval(poll), 10000);
+    }
   };
 
   const handleDecline = () => {
@@ -164,9 +201,9 @@ export default function DashboardReceive({ onTextSessionActive }) {
           <svg className="w-5 h-5 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
           </svg>
-          <span>Receive</span>
+          <span>{t('nav.receive')}</span>
         </div>
-        <span className="text-xs text-text-secondary font-medium">6-Digit Key</span>
+        <span className="text-xs text-text-secondary font-medium">{t('dashboard.yourReceiveCode')}</span>
       </div>
 
       <div className="w-full h-48 rounded-xl border border-border-subtle bg-bg-surface flex flex-col items-center justify-center shadow-sm">
@@ -218,11 +255,11 @@ export default function DashboardReceive({ onTextSessionActive }) {
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={handleDecline} className="flex-1 py-1.5 rounded text-sm font-medium bg-bg-elevated border border-border-subtle text-text-primary hover:text-status-error transition-colors cursor-pointer">
-                Decline
+              <button data-testid="receive-decline-btn" onClick={handleDecline} className="flex-1 py-1.5 rounded text-sm font-medium bg-bg-elevated border border-border-subtle text-text-primary hover:text-status-error transition-colors cursor-pointer">
+                {t('common.decline')}
               </button>
-              <button onClick={handleAccept} className="flex-1 py-1.5 rounded text-sm font-medium bg-accent-primary text-bg-base hover:bg-accent-hover transition-colors cursor-pointer">
-                Accept
+              <button data-testid="receive-accept-btn" onClick={handleAccept} className="flex-1 py-1.5 rounded text-sm font-medium bg-accent-primary text-bg-base hover:bg-accent-hover transition-colors cursor-pointer">
+                {t('common.accept')}
               </button>
             </div>
           </div>
@@ -260,7 +297,12 @@ export default function DashboardReceive({ onTextSessionActive }) {
           <div className="w-full p-4 rounded-lg bg-status-error/10 border border-status-error shadow-sm flex items-center justify-between">
              <div className="flex items-center gap-2 text-status-error">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                <span className="text-sm font-medium">{receiverState === 'DECLINED' ? 'Declined' : 'Failed'}</span>
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium">{receiverState === 'DECLINED' ? 'Declined' : 'Failed'}</span>
+                  {errorMessage && receiverState === 'FAILED' && (
+                    <span className="text-xs opacity-80 mt-0.5">{errorMessage}</span>
+                  )}
+                </div>
              </div>
              <button onClick={initReceiver} className="text-xs px-3 py-1 rounded bg-bg-surface border border-border-subtle hover:border-accent-primary transition-colors cursor-pointer text-text-primary">
               Retry

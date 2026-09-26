@@ -3,29 +3,34 @@ import { SignalingClient } from '../signaling/SignalingClient.js';
 import { PeerManager } from '../webrtc/PeerManager.js';
 import { TextSession, MAX_TEXT_CHARACTERS } from '../text/TextSession.js';
 import { generateDeviceLabel } from '../utils/deviceLabel.js';
-import LockoutBanner from './LockoutBanner.jsx';
+import { useTranslation } from 'react-i18next';
 
 const DashboardText = forwardRef((props, ref) => {
+  const { t } = useTranslation();
   const [text, setText] = useState('');
   const [canEdit, setCanEdit] = useState(true);
-  const [validity, setValidity] = useState(60);
-  const [sessionActive, setSessionActive] = useState(false);
+  const [validity] = useState(60);
+  const [, setSessionActive] = useState(false);
   const [, setSessionId] = useState(null);
   const [codeEntry, setCodeEntry] = useState('');
-  const [receivers, setReceivers] = useState([]);
+  const [, setReceivers] = useState([]);
   const [codeError, setCodeError] = useState(null);
   const [lockoutSeconds, setLockoutSeconds] = useState(0);
-  const [copied, setCopied] = useState(false);
   const [deviceLabel] = useState(() => generateDeviceLabel().fullLabel);
   const [mode, setMode] = useState('sender'); // 'sender' | 'receiver'
 
   const signalingRef = useRef(null);
   const peerManagersRef = useRef(new Map());
   const textSessionRef = useRef(null);
+  const textareaRef = useRef(null);
 
   useImperativeHandle(ref, () => ({
     connectReceiverPeer: (pm) => {
-      setMode('receiver');
+      // Destroy the sender session before switching to receiver mode
+      if (textSessionRef.current) {
+        textSessionRef.current.destroy();
+        textSessionRef.current = null;
+      }
       const session = new TextSession({
         role: 'receiver',
         onTextChange: (newText) => setText(newText),
@@ -33,23 +38,43 @@ const DashboardText = forwardRef((props, ref) => {
       });
       textSessionRef.current = session;
       session.addPeer('sender', pm.textChannel, pm.controlChannel);
+      setMode('receiver');
     }
   }));
 
   useEffect(() => {
-    if (mode === 'receiver') return;
+    if (mode === 'receiver') return; // Receiver session is managed by connectReceiverPeer
+    if (textSessionRef.current) return; // Already initialized
+
     const session = new TextSession({
       role: 'sender',
       onTextChange: (newText) => setText(newText),
+      onPermissionChange: (perm) => setCanEdit(perm),
     });
     session.canEdit = true;
     textSessionRef.current = session;
-    return () => session.destroy();
+
+    return () => {
+      if (textSessionRef.current && textSessionRef.current.role === 'sender') {
+        textSessionRef.current.destroy();
+        textSessionRef.current = null;
+      }
+    };
   }, [mode]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (textSessionRef.current) {
+        textSessionRef.current.destroy();
+        textSessionRef.current = null;
+      }
+    };
+  }, []);
 
   const ensureSession = () => {
     if (mode === 'receiver') return;
-    if (signalingRef.current && sessionActive) return;
+    if (signalingRef.current) return;
 
     const client = new SignalingClient();
     signalingRef.current = client;
@@ -119,8 +144,9 @@ const DashboardText = forwardRef((props, ref) => {
   }, [lockoutSeconds]);
 
   useEffect(() => {
+    const peerManagers = peerManagersRef.current;
     return () => {
-      peerManagersRef.current.forEach(pm => pm.close());
+      peerManagers.forEach(pm => pm.close());
       signalingRef.current?.close();
     };
   }, []);
@@ -134,6 +160,14 @@ const DashboardText = forwardRef((props, ref) => {
     }
   };
 
+  // Auto-resize textarea up to max-height
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [text]);
+
   const handleToggleEdit = (allowed) => {
     setCanEdit(allowed);
     if (mode === 'sender' && textSessionRef.current) {
@@ -145,9 +179,9 @@ const DashboardText = forwardRef((props, ref) => {
     if (!text) return;
     try {
       await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {}
+    } catch {
+      /* ignore error */
+    }
   };
 
   const handleDownloadTxt = () => {
@@ -155,7 +189,7 @@ const DashboardText = forwardRef((props, ref) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `SharePort-Text-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.download = `OnShare-Text-${new Date().toISOString().slice(0, 10)}.txt`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
@@ -175,7 +209,7 @@ const DashboardText = forwardRef((props, ref) => {
           <svg className="w-5 h-5 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7" />
           </svg>
-          <span>Text Live</span>
+          <span>{t('nav.textLive')}</span>
         </div>
         
         <div className="flex items-center gap-3">
@@ -200,11 +234,12 @@ const DashboardText = forwardRef((props, ref) => {
 
       <div className="flex flex-col flex-1 border border-border-subtle rounded-xl bg-bg-surface overflow-hidden shadow-sm">
         <textarea
+          ref={textareaRef}
           value={text}
           disabled={!canEdit && mode === 'receiver'}
           onChange={handleTextChange}
-          placeholder={mode === 'receiver' && !canEdit ? 'Waiting for sender...' : 'Type or paste text here...'}
-          className="w-full flex-1 p-4 bg-transparent text-text-primary font-mono text-sm leading-relaxed resize-none focus:outline-none"
+          placeholder={mode === 'receiver' && !canEdit ? t('dashboard.waitingForSender') : t('dashboard.typeOrPasteText')}
+          className="w-full flex-1 min-h-[200px] max-h-[500px] p-4 bg-transparent text-text-primary font-mono text-sm leading-relaxed resize-none focus:outline-none"
         />
         <div className="px-4 py-2 bg-bg-elevated border-t border-border-subtle flex justify-between items-center text-[10px] uppercase font-bold text-text-secondary tracking-wide">
           <span>Plain text only</span>
@@ -223,7 +258,7 @@ const DashboardText = forwardRef((props, ref) => {
               maxLength={6}
               value={codeEntry}
               onChange={(e) => setCodeEntry(e.target.value.replace(/\D/g, ''))}
-              placeholder="Receiver Code"
+              placeholder={t('dashboard.receiverCode')}
               disabled={lockoutSeconds > 0}
               className="flex-1 px-4 py-2.5 rounded-l bg-bg-elevated border border-r-0 border-border-subtle focus:border-accent-primary text-text-primary font-mono text-sm tracking-widest placeholder:tracking-normal placeholder:font-sans focus:outline-none"
             />
@@ -232,7 +267,7 @@ const DashboardText = forwardRef((props, ref) => {
               disabled={codeEntry.length !== 6 || lockoutSeconds > 0}
               className="px-4 py-2.5 rounded-r border border-l-0 border-accent-primary bg-accent-primary hover:bg-accent-hover disabled:opacity-50 text-bg-base flex items-center justify-center transition-colors cursor-pointer"
             >
-              <svg className="w-4 h-4 transform rotate-45 -ml-0.5 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-4 h-4 transform rotate-50 -ml-0.5 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
               </svg>
             </button>

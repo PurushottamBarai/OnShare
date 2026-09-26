@@ -1,0 +1,34 @@
+{
+  "nav": {
+    "send": "Invia",
+    "receive": "Ricevi",
+    "textLive": "Testo (live)",
+    "contact": "Contatto"
+  },
+  "footer": {
+    "tagline": "Condividi file e messaggi istantaneamente, in modo sicuro e senza registrazione",
+    "howItWorks": "Come funziona",
+    "privacyPolicy": "Nella politica sulla protezione dei dati",
+    "termsOfUse": "Termini di utilizzo",
+    "contact": "Contatto",
+    "feedback": "Commenti"
+  },
+  "status": {
+    "waitingForPeer": "Attesa",
+    "connecting": "Connessione in corso...",
+    "transferring": "In trasferimento",
+    "complete": "Completa",
+    "disconnected": "Disconnessione effettuata",
+    "error": "Errore"
+  },
+  "home": {
+    "title": "Invia file",
+    "receiveTitle": "Ricevi file",
+    "textTitle": "Testo (live)"
+  },
+  "common": {
+    "loading": "Caricamento in corso...",
+    "advertisement": "Pubblicità",
+    "reservedSponsorship": "Spazio di sponsorizzazione riservato (non intrusivo)"
+  }
+}

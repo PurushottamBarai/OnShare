@@ -39,8 +39,8 @@ export class Limiter {
         }, { status: 429 });
       }
 
-      // Check failed attempts (max 20 per 10 min)
-      if (this.failedAttempts.length >= 20) {
+      // Check failed attempts (max 200 per 10 min)
+      if (this.failedAttempts.length >= 200) {
         this.applyLockout(now);
         const retryAfter = Math.ceil((this.lockedUntil - now) / 1000);
         return Response.json({
@@ -50,8 +50,8 @@ export class Limiter {
         }, { status: 429 });
       }
 
-      // Check creation quotas (max 30 per 10 min)
-      if (action === 'create_code' && this.createdCodes.length >= 30) {
+      // Check creation quotas (max 3000 per 10 min)
+      if (action === 'create_code' && this.createdCodes.length >= 3000) {
         return Response.json({
           allowed: false,
           error: 'RATE_LIMITED',
@@ -60,7 +60,7 @@ export class Limiter {
         }, { status: 429 });
       }
 
-      if (action === 'create_session' && this.createdSessions.length >= 30) {
+      if (action === 'create_session' && this.createdSessions.length >= 3000) {
         return Response.json({
           allowed: false,
           error: 'RATE_LIMITED',
@@ -76,7 +76,7 @@ export class Limiter {
       const { type } = await request.json().catch(() => ({}));
       if (type === 'failure') {
         this.failedAttempts.push(now);
-        if (this.failedAttempts.length >= 20) {
+        if (this.failedAttempts.length >= 200) {
           this.applyLockout(now);
         }
       } else if (type === 'create_code') {

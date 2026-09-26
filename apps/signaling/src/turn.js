@@ -10,8 +10,8 @@ export async function generateIceServers(userId, env = {}) {
     'stun:stun.cloudflare.com:3478'
   ];
 
-  const turnSecret = env.TURN_SECRET || 'shareport-dev-turn-secret';
-  const turnDomain = env.TURN_DOMAIN || 'turn.shareport.net';
+  const turnSecret = env.TURN_SECRET || 'onshare-dev-turn-secret';
+  const turnDomain = env.TURN_DOMAIN || 'turn.onshare.net';
 
   // 1-hour expiration per TRD section 6
   const expiry = Math.floor(Date.now() / 1000) + 3600;

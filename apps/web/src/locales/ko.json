@@ -1,0 +1,34 @@
+{
+  "nav": {
+    "send": "보내기",
+    "receive": "수신",
+    "textLive": "텍스트 라이브",
+    "contact": "연락하기"
+  },
+  "footer": {
+    "tagline": "회원 가입 없이 즉시 안전하게 파일과 텍스트를 공유하세요",
+    "howItWorks": "이용방법",
+    "privacyPolicy": "개인 정보 보호 정책",
+    "termsOfUse": "이용 약관",
+    "contact": "연락하기",
+    "feedback": "피드백"
+  },
+  "status": {
+    "waitingForPeer": "동료 대기 중",
+    "connecting": "Connecting",
+    "transferring": "전송 중@ title job",
+    "complete": "완료",
+    "disconnected": "연결이 끊어짐",
+    "error": "오류"
+  },
+  "home": {
+    "title": "파일 보내기",
+    "receiveTitle": "파일 받기",
+    "textTitle": "텍스트 라이브"
+  },
+  "common": {
+    "loading": "로드 중...",
+    "advertisement": "광고",
+    "reservedSponsorship": "예약된 후원 공간 (비침입적)"
+  }
+}
