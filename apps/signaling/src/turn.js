@@ -9,20 +9,31 @@ export async function generateIceServers(userId, env = {}) {
     'stun:stun1.l.google.com:19302',
     'stun:stun2.l.google.com:19302',
     'stun:stun.cloudflare.com:3478',
-    'stun:openrelay.metered.ca:80',
+    'stun:stun.relay.metered.ca:80',
   ];
 
-  const servers = [
-    {
-      urls: stunServers,
-    },
-  ];
+  const servers = [{ urls: stunServers }];
+
+  const meteredDomain = env.METERED_TURN_DOMAIN;
+  const meteredUsername = env.METERED_TURN_USERNAME;
+  const meteredPassword = env.METERED_TURN_PASSWORD;
 
   const turnSecret = env.TURN_SECRET;
   const turnDomain = env.TURN_DOMAIN;
 
-  // If custom TURN credentials provided, use them; otherwise use public OpenRelay TURN fallback
-  if (turnDomain && turnSecret && turnDomain !== 'turn.onshare.net') {
+  if (meteredDomain && meteredUsername && meteredPassword) {
+    // Metered.ca free TURN account (static dashboard credential)
+    servers.push({
+      urls: [
+        `turn:${meteredDomain}:80`,
+        `turn:${meteredDomain}:80?transport=tcp`,
+        `turn:${meteredDomain}:443`,
+        `turns:${meteredDomain}:443?transport=tcp`,
+      ],
+      username: meteredUsername,
+      credential: meteredPassword,
+    });
+  } else if (turnDomain && turnSecret && turnDomain !== 'turn.onshare.net') {
     // 1-hour expiration per TRD section 6
     const expiry = Math.floor(Date.now() / 1000) + 3600;
     const username = `${expiry}:${userId}`;

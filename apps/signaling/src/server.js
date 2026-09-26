@@ -151,6 +151,9 @@ export function createServer(port = 8787) {
   const env = {
     TURN_SECRET: process.env.TURN_SECRET || 'onshare-dev-turn-secret',
     TURN_DOMAIN: process.env.TURN_DOMAIN || 'turn.onshare.net',
+    METERED_TURN_DOMAIN: process.env.METERED_TURN_DOMAIN,
+    METERED_TURN_USERNAME: process.env.METERED_TURN_USERNAME,
+    METERED_TURN_PASSWORD: process.env.METERED_TURN_PASSWORD,
     createWebSocketPair: () => {
       const store = socketStorage.getStore();
       if (store?.serverSide) {
