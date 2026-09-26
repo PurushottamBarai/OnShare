@@ -290,8 +290,10 @@ export default function DashboardSend() {
                 ))}
               </div>
             </div>
-            <div className="text-xs text-right text-text-secondary font-medium">
-              Total Files: {files.length}, {formatBytes(totalFileSize)}
+            <div className="text-xs text-right text-text-secondary font-medium flex items-center justify-end gap-2">
+              <span>Total Files: {files.length}</span>
+              <span className="opacity-40">•</span>
+              <span>{formatBytes(totalFileSize)}</span>
             </div>
           </div>
 

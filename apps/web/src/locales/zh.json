@@ -40,7 +40,7 @@
     "addFiles": "添加文件",
     "noFilesAdded": "No <acronym title=\"Cascading Style Sheet\">CSS</acronym> 添加的文件",
     "orDropFilesHere": "将文件拖拽到这里",
-    "codeValidity": "代码有效性",
+    "codeValidity": "有效期",
     "receiverCode": "接收方代码",
     "enterReceiveCode": "输入6位数的接收代码",
     "yourDeviceName": "设备名称：",

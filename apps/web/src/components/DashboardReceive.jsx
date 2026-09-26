@@ -280,7 +280,7 @@ export default function DashboardReceive({ onTextSessionActive }) {
                 <p className="text-base font-semibold text-text-primary tracking-wide">Text Session</p>
               ) : (
                 <p className="text-base font-semibold text-text-primary tracking-wide">
-                  {manifest.files?.length || 0} file{(manifest.files?.length || 0) !== 1 ? 's' : ''}, {formatBytes(manifest.totalSize)}
+                  {manifest.files?.length || 0} file{(manifest.files?.length || 0) !== 1 ? 's' : ''} • {formatBytes(manifest.totalSize)}
                 </p>
               )}
             </div>

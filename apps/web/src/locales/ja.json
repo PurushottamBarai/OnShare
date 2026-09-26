@@ -40,7 +40,7 @@
     "addFiles": "ファイルを追加",
     "noFilesAdded": "ファイルが追加されていません。",
     "orDropFilesHere": "ここにファイルをドロップ",
-    "codeValidity": "コードの有効性",
+    "codeValidity": "有効期限",
     "receiverCode": "受取人コード",
     "enterReceiveCode": "6桁の受信コードを入力してください",
     "yourDeviceName": "デバイス名：",
