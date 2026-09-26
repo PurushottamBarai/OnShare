@@ -8,7 +8,8 @@ export async function generateIceServers(userId, env = {}) {
     'stun:stun.l.google.com:19302',
     'stun:stun1.l.google.com:19302',
     'stun:stun2.l.google.com:19302',
-    'stun:stun.cloudflare.com:3478'
+    'stun:stun.cloudflare.com:3478',
+    'stun:openrelay.metered.ca:80',
   ];
 
   const servers = [
@@ -20,7 +21,7 @@ export async function generateIceServers(userId, env = {}) {
   const turnSecret = env.TURN_SECRET;
   const turnDomain = env.TURN_DOMAIN;
 
-  // Only generate TURN config if a real domain (not unresolvable placeholder) is provided
+  // If custom TURN credentials provided, use them; otherwise use public OpenRelay TURN fallback
   if (turnDomain && turnSecret && turnDomain !== 'turn.onshare.net') {
     // 1-hour expiration per TRD section 6
     const expiry = Math.floor(Date.now() / 1000) + 3600;
@@ -47,6 +48,17 @@ export async function generateIceServers(userId, env = {}) {
       ],
       username,
       credential,
+    });
+  } else {
+    // Free community TURN fallback for NAT / mobile network traversal
+    servers.push({
+      urls: [
+        'turn:openrelay.metered.ca:80',
+        'turn:openrelay.metered.ca:443',
+        'turn:openrelay.metered.ca:443?transport=tcp',
+      ],
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
     });
   }
 
