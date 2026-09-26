@@ -355,9 +355,10 @@ export class Session {
       matchedAt: now,
     });
 
-    // Notify sender of match
+    // Notify sender of match with consistent iceServers
     sendWsMessage(this.senderSocket, 'session.receiverMatched', {
       receiverId,
+      iceServers,
     }, msgId);
   }
 

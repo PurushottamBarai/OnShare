@@ -6,6 +6,7 @@ OnShare is a browser-to-browser data transmission and real-time text collaborati
 ## Features
 - Direct peer-to-peer file transfers via WebRTC data channels.
 - Real-time collaborative text editing using Yjs CRDTs.
+- Sharing to multiple devices in a single session.
 - Receiver-generated 6-digit ephemeral access codes.
 - Zero-storage, ephemeral WebSocket-based signaling coordination.
 - Live streaming and archiving of multiple files into a single ZIP via `fflate`.

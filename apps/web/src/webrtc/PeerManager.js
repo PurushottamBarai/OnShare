@@ -15,8 +15,17 @@ export class PeerManager {
   }) {
     this.peerId = peerId; // receiverId or 'sender'
     this.role = role; // 'sender' | 'receiver'
-    this.iceServers = iceServers || [{ urls: 'stun:stun.l.google.com:19302' }];
     this.signalingClient = signalingClient;
+    this.iceServers = (iceServers && iceServers.length > 0) ? iceServers : [
+      {
+        urls: [
+          'stun:stun.l.google.com:19302',
+          'stun:stun1.l.google.com:19302',
+          'stun:stun2.l.google.com:19302',
+          'stun:stun.cloudflare.com:3478',
+        ],
+      },
+    ];
     this.onManifest = onManifest;
     this.onControlMessage = onControlMessage;
     this.onStateChange = onStateChange;
@@ -27,6 +36,8 @@ export class PeerManager {
     this.dataChannel = null;
     this.textChannel = null;
     this.state = 'CONNECTING'; // 'CONNECTING' | 'WAITING_ACCEPT' | 'ACCEPTED' | 'TRANSFERRING' | 'DONE' | 'DECLINED' | 'FAILED' | 'CLOSED'
+    this.pendingCandidates = [];
+    this.disconnectTimeout = null;
 
     if (typeof window !== 'undefined') {
       window.__activePeerManagers = window.__activePeerManagers || new Set();
@@ -58,8 +69,20 @@ export class PeerManager {
     };
 
     this.pc.onconnectionstatechange = () => {
-      if (this.pc.connectionState === 'failed' || this.pc.connectionState === 'disconnected') {
+      if (this.pc.connectionState === 'failed') {
         this.setState('FAILED');
+      } else if (this.pc.connectionState === 'disconnected') {
+        if (this.disconnectTimeout) clearTimeout(this.disconnectTimeout);
+        this.disconnectTimeout = setTimeout(() => {
+          if (this.pc?.connectionState === 'disconnected') {
+            this.setState('FAILED');
+          }
+        }, 5000);
+      } else if (this.pc.connectionState === 'connected') {
+        if (this.disconnectTimeout) {
+          clearTimeout(this.disconnectTimeout);
+          this.disconnectTimeout = null;
+        }
       }
     };
 
@@ -184,16 +207,36 @@ export class PeerManager {
 
       if (signal.type === 'signal.offer') {
         await this.pc.setRemoteDescription(new RTCSessionDescription(data));
+        while (this.pendingCandidates.length > 0) {
+          const cand = this.pendingCandidates.shift();
+          try {
+            await this.pc.addIceCandidate(new RTCIceCandidate(cand));
+          } catch {
+            // ignore
+          }
+        }
         const answer = await this.pc.createAnswer();
         await this.pc.setLocalDescription(answer);
         this.signalingClient.sendSignal('signal.answer', 'sender', answer);
       } else if (signal.type === 'signal.answer') {
         await this.pc.setRemoteDescription(new RTCSessionDescription(data));
+        while (this.pendingCandidates.length > 0) {
+          const cand = this.pendingCandidates.shift();
+          try {
+            await this.pc.addIceCandidate(new RTCIceCandidate(cand));
+          } catch {
+            // ignore
+          }
+        }
       } else if (signal.type === 'signal.ice') {
-        try {
-          await this.pc.addIceCandidate(new RTCIceCandidate(data));
-        } catch {
-          // ignore candidate race
+        if (!this.pc.remoteDescription) {
+          this.pendingCandidates.push(data);
+        } else {
+          try {
+            await this.pc.addIceCandidate(new RTCIceCandidate(data));
+          } catch {
+            // ignore candidate race
+          }
         }
       }
     } catch (err) {
@@ -217,6 +260,10 @@ export class PeerManager {
   }
 
   close() {
+    if (this.disconnectTimeout) {
+      clearTimeout(this.disconnectTimeout);
+      this.disconnectTimeout = null;
+    }
     if (typeof window !== 'undefined' && window.__activePeerManagers) {
       window.__activePeerManagers.delete(this);
     }
