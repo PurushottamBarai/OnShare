@@ -18,6 +18,7 @@ export class OtpRoom {
     this.roomState = 'IDLE'; // 'IDLE' | 'WAITING' | 'MATCHED' | 'EXPIRED' | 'CANCELLED'
     this.receiverId = null;
     this.expiryTimeout = null;
+    this.disconnectTimeout = null;
   }
 
   async fetch(request) {
@@ -33,6 +34,16 @@ export class OtpRoom {
         (this.expiresAt && now > this.expiresAt)
       );
       return Response.json({ available: isAvailable });
+    }
+
+    // 1b. Internal HTTP endpoint: Check if code can be resumed
+    if (url.pathname === '/resume-check') {
+      const now = Date.now();
+      const canResume = (
+        (this.roomState === 'WAITING' || this.roomState === 'IDLE' || this.roomState === 'DISCONNECTED') &&
+        (this.expiresAt ? now < this.expiresAt : true)
+      );
+      return Response.json({ canResume, expiresAt: this.expiresAt });
     }
 
     if (url.pathname === '/expire') {
@@ -145,6 +156,11 @@ export class OtpRoom {
   }
 
   setupReceiverSocket(serverWs, code) {
+    if (this.disconnectTimeout) {
+      clearTimeout(this.disconnectTimeout);
+      this.disconnectTimeout = null;
+    }
+
     // If there was an existing receiver socket, clean it up
     if (this.receiverSocket && this.receiverSocket !== serverWs) {
       try {
@@ -154,12 +170,20 @@ export class OtpRoom {
       }
     }
 
+    const now = Date.now();
+    const isResuming = (this.code === code && this.expiresAt > now);
+
     this.receiverSocket = serverWs;
     this.code = code;
     this.roomState = 'WAITING';
-    this.receiverId = `recv_${crypto.randomUUID().slice(0, 8)}`;
-    // 10 minutes validity (TRD section 4.1 & 4.4)
-    this.expiresAt = Date.now() + 10 * 60 * 1000;
+    if (!this.receiverId || !isResuming) {
+      this.receiverId = `recv_${crypto.randomUUID().slice(0, 8)}`;
+    }
+
+    // 10 minutes validity - retain remaining time if resuming, otherwise set new 10 min
+    if (!isResuming || !this.expiresAt) {
+      this.expiresAt = now + 10 * 60 * 1000;
+    }
 
     // Send receiver.created
     sendWsMessage(serverWs, 'receiver.created', {
@@ -167,12 +191,13 @@ export class OtpRoom {
       expiresAt: this.expiresAt,
     });
 
-    // Schedule 10-minute expiry timer
+    // Schedule expiry timer
     if (this.expiryTimeout) {
       clearTimeout(this.expiryTimeout);
     }
+    const remainingMs = Math.max(1000, this.expiresAt - now);
     this.expiryTimeout = setTimeout(() => {
-      if (this.roomState === 'WAITING') {
+      if (this.roomState === 'WAITING' || this.roomState === 'DISCONNECTED') {
         this.roomState = 'EXPIRED';
         sendWsMessage(this.receiverSocket, 'error', {
           code: ERROR_CODES.OTP_EXPIRED,
@@ -184,8 +209,8 @@ export class OtpRoom {
           // ignore
         }
       }
-    }, 10 * 60 * 1000);
-    this.expiryTimeout.unref();
+    }, remainingMs);
+    this.expiryTimeout?.unref?.();
 
     serverWs.addEventListener('message', async (event) => {
       try {
@@ -202,6 +227,10 @@ export class OtpRoom {
             if (this.expiryTimeout) {
               clearTimeout(this.expiryTimeout);
               this.expiryTimeout = null;
+            }
+            if (this.disconnectTimeout) {
+              clearTimeout(this.disconnectTimeout);
+              this.disconnectTimeout = null;
             }
             sendWsMessage(serverWs, 'error', {
               code: 'CODE_REGENERATED',
@@ -225,15 +254,25 @@ export class OtpRoom {
     });
 
     serverWs.addEventListener('close', () => {
-      if (this.roomState === 'WAITING') {
-        // Disconnecting invalidates the code at once (TRD section 4.1)
-        this.roomState = 'CANCELLED';
+      if (this.receiverSocket === serverWs) {
+        this.receiverSocket = null;
+        if (this.roomState === 'WAITING') {
+          this.roomState = 'DISCONNECTED';
+          if (this.disconnectTimeout) {
+            clearTimeout(this.disconnectTimeout);
+          }
+          this.disconnectTimeout = setTimeout(() => {
+            if (this.roomState === 'DISCONNECTED') {
+              this.roomState = 'CANCELLED';
+              if (this.expiryTimeout) {
+                clearTimeout(this.expiryTimeout);
+                this.expiryTimeout = null;
+              }
+            }
+          }, 60000);
+          this.disconnectTimeout?.unref?.();
+        }
       }
-      if (this.expiryTimeout) {
-        clearTimeout(this.expiryTimeout);
-        this.expiryTimeout = null;
-      }
-      this.receiverSocket = null;
     });
   }
 }

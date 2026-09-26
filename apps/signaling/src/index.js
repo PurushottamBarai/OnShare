@@ -94,23 +94,37 @@ export default {
           }));
         }
 
-        // Draw unique 6-digit code with up to 5 tries (TRD 4.1)
+        // Check if client requested resuming an existing active code (e.g. page refresh)
+        const resumeCode = url.searchParams.get('resumeCode');
         let selectedCode = null;
-        for (let attempt = 0; attempt < 5; attempt++) {
-          const candidate = generate6DigitCode();
-          if (!env?.OTP_ROOM) {
-            selectedCode = candidate;
-            break;
-          }
-
-          const otpKey = getOtpKey(candidate, namespace);
+        if (resumeCode && /^\d{6}$/.test(resumeCode) && env?.OTP_ROOM) {
+          const otpKey = getOtpKey(resumeCode, namespace);
           const otpStub = env.OTP_ROOM.get(env.OTP_ROOM.idFromName(otpKey));
-          const checkRes = await otpStub.fetch(new Request('http://internal/claim-check'));
-          const checkData = await checkRes.json().catch(() => ({ available: false }));
+          const checkRes = await otpStub.fetch(new Request('http://internal/resume-check'));
+          const checkData = await checkRes.json().catch(() => ({ canResume: false }));
+          if (checkData.canResume) {
+            selectedCode = resumeCode;
+          }
+        }
 
-          if (checkData.available) {
-            selectedCode = candidate;
-            break;
+        // Draw unique 6-digit code with up to 5 tries (TRD 4.1) if not resuming
+        if (!selectedCode) {
+          for (let attempt = 0; attempt < 5; attempt++) {
+            const candidate = generate6DigitCode();
+            if (!env?.OTP_ROOM) {
+              selectedCode = candidate;
+              break;
+            }
+
+            const otpKey = getOtpKey(candidate, namespace);
+            const otpStub = env.OTP_ROOM.get(env.OTP_ROOM.idFromName(otpKey));
+            const checkRes = await otpStub.fetch(new Request('http://internal/claim-check'));
+            const checkData = await checkRes.json().catch(() => ({ available: false }));
+
+            if (checkData.available) {
+              selectedCode = candidate;
+              break;
+            }
           }
         }
 

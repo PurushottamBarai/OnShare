@@ -10,6 +10,7 @@
   "scripts": {
     "dev:web": "npm run --workspace=@onshare/web dev",
     "dev:signaling": "npm run --workspace=@onshare/signaling dev",
+    "dev:signaling:node": "node apps/signaling/src/server.js",
     "build": "npm run --workspaces --if-present build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

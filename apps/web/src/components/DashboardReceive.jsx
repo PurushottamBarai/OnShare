@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { SignalingClient } from '../signaling/SignalingClient.js';
 import { PeerManager } from '../webrtc/PeerManager.js';
 import { ReceiverSink } from '../transfer/receiverSink.js';
-import DeviceLabelChip from './DeviceLabelChip.jsx';
 import { useTranslation } from 'react-i18next';
 
 function formatBytes(bytes) {
@@ -27,12 +26,29 @@ export default function DashboardReceive({ onTextSessionActive }) {
   const peerManagerRef = useRef(null);
   const receiverSinkRef = useRef(null);
 
-  const initReceiver = () => {
+  const initReceiver = (forceNew = false) => {
     cleanup();
     setReceiverState('CONNECTING');
     setErrorMessage(null);
     setManifest(null);
     setTransferProgress({ percent: 0, bytesReceived: 0, totalSize: 0, speedBps: 0, timeRemainingSec: 0 });
+
+    let cachedCode = null;
+    if (!forceNew && typeof window !== 'undefined' && window.sessionStorage) {
+      try {
+        const stored = sessionStorage.getItem('onshare_receiver_code');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed?.code && parsed?.expiresAt && Date.now() < parsed.expiresAt) {
+            cachedCode = parsed.code;
+          } else {
+            sessionStorage.removeItem('onshare_receiver_code');
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
 
     const client = new SignalingClient();
     signalingRef.current = client;
@@ -40,6 +56,16 @@ export default function DashboardReceive({ onTextSessionActive }) {
     client.on('receiver.created', (payload) => {
       setCode(payload.code);
       setReceiverState('WAITING');
+      try {
+        if (typeof window !== 'undefined' && window.sessionStorage) {
+          sessionStorage.setItem('onshare_receiver_code', JSON.stringify({
+            code: payload.code,
+            expiresAt: payload.expiresAt,
+          }));
+        }
+      } catch {
+        // ignore
+      }
     });
 
     client.on('receiver.matched', (payload) => {
@@ -86,7 +112,7 @@ export default function DashboardReceive({ onTextSessionActive }) {
       setErrorMessage(payload.message || 'An error occurred.');
     });
 
-    client.connectReceiver();
+    client.connectReceiver({ resumeCode: cachedCode });
   };
 
   const cleanup = () => {
@@ -116,8 +142,15 @@ export default function DashboardReceive({ onTextSessionActive }) {
   };
 
   const handleRegenerate = () => {
+    try {
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        sessionStorage.removeItem('onshare_receiver_code');
+      }
+    } catch {
+      // ignore
+    }
     signalingRef.current?.regenerateCode();
-    initReceiver();
+    initReceiver(true);
   };
 
   const handleAccept = async () => {
@@ -242,17 +275,14 @@ export default function DashboardReceive({ onTextSessionActive }) {
       <div className="flex-1">
         {receiverState === 'AWAITING_ACCEPT' && manifest && (
           <div className="w-full p-4 rounded-lg bg-bg-surface border border-border-subtle shadow-sm flex flex-col gap-3">
-            <div className="flex items-center gap-3">
-              <DeviceLabelChip name={manifest.senderLabel || 'Unknown'} />
-              <div className="flex-1 min-w-0 text-right">
-                {manifest.mode === 'text' ? (
-                  <p className="text-sm font-medium text-text-primary">Text Session</p>
-                ) : (
-                  <p className="text-sm font-medium text-text-primary">
-                    {manifest.files?.length || 0} file{(manifest.files?.length || 0) !== 1 ? 's' : ''}, {formatBytes(manifest.totalSize)}
-                  </p>
-                )}
-              </div>
+            <div className="flex items-center justify-center py-1">
+              {manifest.mode === 'text' ? (
+                <p className="text-base font-semibold text-text-primary tracking-wide">Text Session</p>
+              ) : (
+                <p className="text-base font-semibold text-text-primary tracking-wide">
+                  {manifest.files?.length || 0} file{(manifest.files?.length || 0) !== 1 ? 's' : ''}, {formatBytes(manifest.totalSize)}
+                </p>
+              )}
             </div>
             <div className="flex gap-2">
               <button data-testid="receive-decline-btn" onClick={handleDecline} className="flex-1 py-1.5 rounded text-sm font-medium bg-bg-elevated border border-border-subtle text-text-primary hover:text-status-error transition-colors cursor-pointer">

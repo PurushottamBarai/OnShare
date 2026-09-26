@@ -77,11 +77,19 @@ export class SignalingClient {
   /**
    * Connect as Receiver (HM-1, RC-1)
    */
-  connectReceiver() {
+  connectReceiver(options = {}) {
     this.role = 'receiver';
     this.isManualClose = false;
+    const params = new URLSearchParams();
     const workerIndex = this.getWorkerIndex();
-    const url = `${this.baseUrl}/receiver${workerIndex ? `?workerIndex=${workerIndex}` : ''}`;
+    if (workerIndex) {
+      params.set('workerIndex', workerIndex);
+    }
+    if (options.resumeCode) {
+      params.set('resumeCode', options.resumeCode);
+    }
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const url = `${this.baseUrl}/receiver${query}`;
     this.openSocket(url);
   }
 

@@ -330,4 +330,29 @@ describe('Signaling Service Integration Flows (TRD Section 15)', () => {
     const capErr = await waitForMessage(senderWs, 'error');
     expect(capErr.payload.code).toBe(ERROR_CODES.SESSION_FULL);
   });
+
+  // 7. OTP RESUME FLOW
+  it('preserves receiver OTP code across disconnects and reloads when resumeCode is passed', async () => {
+    // 1. Initial receiver connects
+    const recvReq1 = new Request('https://signaling.local/ws/receiver', {
+      headers: { Upgrade: 'websocket' },
+    });
+    const recvRes1 = await worker.fetch(recvReq1, env);
+    const recvWs1 = recvRes1.webSocket;
+    const { code: originalCode, expiresAt: originalExpiresAt } = (await waitForMessage(recvWs1, 'receiver.created')).payload;
+
+    // Simulate page refresh / tab reload (close old socket)
+    recvWs1.close();
+
+    // 2. Receiver reconnects with resumeCode
+    const recvReq2 = new Request(`https://signaling.local/ws/receiver?resumeCode=${originalCode}`, {
+      headers: { Upgrade: 'websocket' },
+    });
+    const recvRes2 = await worker.fetch(recvReq2, env);
+    const recvWs2 = recvRes2.webSocket;
+    const { code: resumedCode, expiresAt: resumedExpiresAt } = (await waitForMessage(recvWs2, 'receiver.created')).payload;
+
+    expect(resumedCode).toBe(originalCode);
+    expect(resumedExpiresAt).toBe(originalExpiresAt);
+  });
 });
