@@ -14,12 +14,27 @@ export async function generateIceServers(userId, env = {}) {
 
   const servers = [{ urls: stunServers }];
 
+  const expressUsername = env.EXPRESSTURN_USERNAME;
+  const expressPassword = env.EXPRESSTURN_PASSWORD;
+
   const meteredDomain = env.METERED_TURN_DOMAIN;
   const meteredUsername = env.METERED_TURN_USERNAME;
   const meteredPassword = env.METERED_TURN_PASSWORD;
 
   const turnSecret = env.TURN_SECRET;
   const turnDomain = env.TURN_DOMAIN;
+
+  if (expressUsername && expressPassword) {
+    // ExpressTURN free tier (1TB/month, static credentials)
+    servers.push({
+      urls: [
+        'turn:free.expressturn.com:3478?transport=udp',
+        'turn:free.expressturn.com:3478?transport=tcp',
+      ],
+      username: expressUsername,
+      credential: expressPassword,
+    });
+  }
 
   if (meteredDomain && meteredUsername && meteredPassword) {
     // Metered.ca free TURN account (static dashboard credential)
@@ -59,17 +74,6 @@ export async function generateIceServers(userId, env = {}) {
       ],
       username,
       credential,
-    });
-  } else {
-    // Free community TURN fallback for NAT / mobile network traversal
-    servers.push({
-      urls: [
-        'turn:openrelay.metered.ca:80',
-        'turn:openrelay.metered.ca:443',
-        'turn:openrelay.metered.ca:443?transport=tcp',
-      ],
-      username: 'openrelayproject',
-      credential: 'openrelayproject',
     });
   }
 

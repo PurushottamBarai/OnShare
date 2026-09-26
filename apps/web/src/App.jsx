@@ -143,10 +143,10 @@ export default function App() {
           </nav>
 
           {/* Language Switcher */}
-          <div className="relative hidden sm:block">
+          <div className="relative">
             <button
               onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-border-subtle bg-bg-elevated hover:border-accent-primary transition-colors text-text-primary text-sm font-medium focus:outline-none"
+              className="flex items-center gap-1.5 sm:gap-2 p-2 sm:px-3 sm:py-1.5 rounded-full border border-border-subtle bg-bg-elevated hover:border-accent-primary transition-colors text-text-primary text-sm font-medium focus:outline-none cursor-pointer"
               aria-label="Select Language"
             >
               <svg
@@ -162,9 +162,9 @@ export default function App() {
                   d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
                 />
               </svg>
-              <span>{(i18n.language || "en").toUpperCase()}</span>
+              <span className="hidden sm:inline">{(i18n.language || "en").toUpperCase()}</span>
               <svg
-                className={`w-4 h-4 transition-transform ${isLangMenuOpen ? "rotate-180" : ""}`}
+                className={`w-4 h-4 transition-transform hidden sm:inline-block ${isLangMenuOpen ? "rotate-180" : ""}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -296,10 +296,11 @@ export default function App() {
       {/* Footer per AD-4 */}
       <footer className="border-t border-border-subtle bg-bg-surface px-6 py-6 text-helper text-text-secondary mt-auto">
         <div className="max-w-content mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
+          <p className="text-center sm:text-left">
             <span className="font-semibold text-text-primary">OnShare</span>
-            <span> • {t("footer.tagline")}</span>
-          </div>
+            <span className="hidden sm:inline"> • </span>
+            <span className="block sm:inline mt-0.5 sm:mt-0">{t("footer.tagline")}</span>
+          </p>
           <div className="flex flex-wrap items-center justify-center gap-4 text-xs">
             <Link to="/how-it-works" className="hover:text-text-primary">
               {t("footer.howItWorks")}

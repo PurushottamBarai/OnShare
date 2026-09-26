@@ -151,6 +151,8 @@ export function createServer(port = 8787) {
   const env = {
     TURN_SECRET: process.env.TURN_SECRET || 'onshare-dev-turn-secret',
     TURN_DOMAIN: process.env.TURN_DOMAIN || 'turn.onshare.net',
+    EXPRESSTURN_USERNAME: process.env.EXPRESSTURN_USERNAME,
+    EXPRESSTURN_PASSWORD: process.env.EXPRESSTURN_PASSWORD,
     METERED_TURN_DOMAIN: process.env.METERED_TURN_DOMAIN,
     METERED_TURN_USERNAME: process.env.METERED_TURN_USERNAME,
     METERED_TURN_PASSWORD: process.env.METERED_TURN_PASSWORD,
