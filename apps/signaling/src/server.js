@@ -1,7 +1,31 @@
 import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { WebSocketServer, WebSocket } from 'ws';
 import worker, { OtpRoom, Session, Limiter } from './index.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DIST_DIR = path.resolve(__dirname, '../../web/dist');
+
+const MIME_TYPES = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
+  '.webp': 'image/webp',
+};
 
 class SafeMessageEvent extends Event {
   constructor(type, init = {}) {
@@ -169,6 +193,44 @@ export function createServer(port = 8787) {
       }
       await new Promise((resolve) => server.close(resolve));
       return;
+    }
+
+    // 1. API/worker endpoints
+    const isWorkerEndpoint = url.pathname === '/health' || url.pathname.startsWith('/test/');
+
+    // 2. Static file serving fallback for Single-Service deployment (Render, Docker, etc.)
+    if (!isWorkerEndpoint && fs.existsSync(DIST_DIR) && (req.method === 'GET' || req.method === 'HEAD')) {
+      const sanitizedPath = path.normalize(url.pathname).replace(/^(\.\.[/\\])+/, '');
+      const filePath = path.join(DIST_DIR, sanitizedPath);
+
+      // Prevent directory traversal
+      if (filePath.startsWith(DIST_DIR)) {
+        try {
+          const stat = fs.existsSync(filePath) ? fs.statSync(filePath) : null;
+          if (stat && stat.isFile()) {
+            const ext = path.extname(filePath).toLowerCase();
+            res.statusCode = 200;
+            res.setHeader('Content-Type', MIME_TYPES[ext] || 'application/octet-stream');
+            if (ext !== '.html') {
+              res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+            } else {
+              res.setHeader('Cache-Control', 'no-cache');
+            }
+            return res.end(fs.readFileSync(filePath));
+          }
+
+          // SPA fallback to index.html for client routes (e.g. /send, /receive, /privacy)
+          const indexPath = path.join(DIST_DIR, 'index.html');
+          if (fs.existsSync(indexPath)) {
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'text/html; charset=utf-8');
+            res.setHeader('Cache-Control', 'no-cache');
+            return res.end(fs.readFileSync(indexPath));
+          }
+        } catch {
+          // Fall through to worker handler
+        }
+      }
     }
 
     const workerReq = new Request(url.toString(), {
