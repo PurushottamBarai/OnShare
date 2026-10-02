@@ -4,7 +4,72 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OnShare - Direct Browser File & Live Text Sharing</title>
+    
+    <title>OnShare – Direct P2P Browser File & Live Text Sharing</title>
+    <meta name="description" content="Transfer files of any size and share live text directly between browsers using encrypted WebRTC. Fast, private, zero-install, and no cloud storage." />
+    <link rel="canonical" href="https://onshare.me/" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#1A1D23" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="OnShare" />
+    <meta property="og:url" content="https://onshare.me/" />
+    <meta property="og:title" content="OnShare – Direct P2P Browser File & Live Text Sharing" />
+    <meta property="og:description" content="Transfer files of any size and share live text directly between browsers using encrypted WebRTC. Fast, private, zero-install, and no cloud storage." />
+    <meta property="og:image" content="https://onshare.me/og-image.png" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://onshare.me/" />
+    <meta name="twitter:title" content="OnShare – Direct P2P Browser File & Live Text Sharing" />
+    <meta name="twitter:description" content="Transfer files of any size and share live text directly between browsers using encrypted WebRTC. Fast, private, zero-install, and no cloud storage." />
+    <meta name="twitter:image" content="https://onshare.me/og-image.png" />
+
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "OnShare",
+      "url": "https://onshare.me",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "All (Web Browser)",
+      "browserRequirements": "Requires WebRTC and JavaScript enabled",
+      "description": "Secure, real-time peer-to-peer file transfer and live collaborative text sharing directly between web browsers with end-to-end encryption and zero server storage.",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "featureList": [
+        "Direct browser-to-browser WebRTC DataChannel transfer",
+        "Reversed 6-digit OTP code authentication",
+        "Single and multi-file transfer with automatic streaming zip",
+        "Real-time collaborative live text notepad",
+        "Zero content storage on servers",
+        "End-to-end encrypted transfer via DTLS/SCTP"
+      ]
+    }
+    </script>
+
+    <!-- First-Party Reverse Proxied GA4 Analytics (ad-block resilient) -->
+    <script>
+      (function(){
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = '/analytics/gtag.js';
+        document.head.appendChild(s);
+      })();
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-77T9MNGB02', {
+        transport_url: window.location.origin + '/analytics',
+        first_party_collection: true
+      });
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">

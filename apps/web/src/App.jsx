@@ -2,6 +2,7 @@ import React, { Suspense, lazy, useState, useEffect } from "react";
 import { Routes, Route, Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import ConsentBanner from "./components/ConsentBanner.jsx";
+import { getRouteSEO } from "./utils/seoConfig.js";
 
 const LANGUAGES = [
   { code: "en", name: "English" },
@@ -79,6 +80,35 @@ export default function App() {
   useEffect(() => {
     setIsMobileMenuOpen(false);
     setIsLangMenuOpen(false);
+
+    const seo = getRouteSEO(location.pathname);
+    document.title = seo.title;
+
+    const updateMeta = (name, prop, content) => {
+      let el = document.querySelector(name ? `meta[name="${name}"]` : `meta[property="${prop}"]`);
+      if (!el) {
+        el = document.createElement("meta");
+        if (name) el.setAttribute("name", name);
+        if (prop) el.setAttribute("property", prop);
+        document.head.appendChild(el);
+      }
+      el.setAttribute("content", content);
+    };
+
+    updateMeta("description", null, seo.description);
+    updateMeta(null, "og:title", seo.title);
+    updateMeta(null, "og:description", seo.description);
+    updateMeta(null, "og:url", seo.canonical);
+    updateMeta("twitter:title", null, seo.title);
+    updateMeta("twitter:description", null, seo.description);
+
+    let canonical = document.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.setAttribute("rel", "canonical");
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute("href", seo.canonical);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -317,6 +347,14 @@ export default function App() {
             <Link to="/feedback" className="hover:text-text-primary">
               {t("footer.feedback")}
             </Link>
+            <a
+              href="https://mediasaver-57yu.onrender.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-text-primary"
+            >
+              {t("footer.products") || "Products"}
+            </a>
           </div>
         </div>
       </footer>

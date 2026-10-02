@@ -11,7 +11,8 @@
     "privacyPolicy": "Privacy Policy",
     "termsOfUse": "Terms of Use",
     "contact": "Contact",
-    "feedback": "Feedback"
+    "feedback": "Feedback",
+    "products": "Products"
   },
   "status": {
     "waitingForPeer": "Waiting for peer",

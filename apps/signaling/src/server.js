@@ -1,4 +1,5 @@
 import http from 'node:http';
+import https from 'node:https';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,6 +13,8 @@ const DIST_DIR = path.resolve(__dirname, '../../web/dist');
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
+  '.xml': 'text/xml; charset=utf-8',
+  '.txt': 'text/plain; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
@@ -147,6 +150,54 @@ class InternalSocket extends EventTarget {
   }
 }
 
+const ROUTE_SEO = {
+  '/': {
+    title: 'OnShare – Direct P2P Browser File & Live Text Sharing',
+    description: 'Transfer files of any size and share live text directly between browsers using encrypted WebRTC. Fast, private, zero-install, and no cloud storage.',
+    canonical: 'https://onshare.me/'
+  },
+  '/send': {
+    title: 'Send Files Online – Secure P2P Browser Transfer | OnShare',
+    description: 'Send files and folders directly from your browser to recipient devices with zero upload to cloud servers. Fast peer-to-peer file transfer.',
+    canonical: 'https://onshare.me/send'
+  },
+  '/receive': {
+    title: 'Receive Files – Direct Browser-to-Browser Transfer | OnShare',
+    description: 'Generate a secure single-use 6-digit code to receive files or live text directly into your browser with end-to-end encryption.',
+    canonical: 'https://onshare.me/receive'
+  },
+  '/text': {
+    title: 'Live Text Sharing – Real-Time Collaborative Notepad | OnShare',
+    description: 'Collaboratively type, paste, and edit plain text in real-time between browsers without login or storage. Powered by Yjs CRDTs.',
+    canonical: 'https://onshare.me/text'
+  },
+  '/how-it-works': {
+    title: 'How It Works – Private P2P WebRTC Transfer | OnShare',
+    description: 'Discover how OnShare enables direct browser-to-browser file transfers and live text synchronization with zero content saved on servers.',
+    canonical: 'https://onshare.me/how-it-works'
+  },
+  '/privacy': {
+    title: 'Privacy Policy – Zero Content Retention Architecture | OnShare',
+    description: 'OnShare never inspects, retains, or stores your file names, contents, or text messages. Review our privacy-by-design policy.',
+    canonical: 'https://onshare.me/privacy'
+  },
+  '/terms': {
+    title: 'Terms of Use | OnShare',
+    description: 'Read the terms of use for OnShare. Simple guidelines for secure, responsible peer-to-peer browser sharing.',
+    canonical: 'https://onshare.me/terms'
+  },
+  '/contact': {
+    title: 'Contact Us – Support & Inquiries | OnShare',
+    description: 'Contact the OnShare team for technical support, inquiries, feedback, or abuse reports.',
+    canonical: 'https://onshare.me/contact'
+  },
+  '/feedback': {
+    title: 'Feedback & Feature Requests | OnShare',
+    description: 'Help improve OnShare by sharing your user experience, bug reports, and feature suggestions.',
+    canonical: 'https://onshare.me/feedback'
+  }
+};
+
 export function createServer(port = 8787) {
   const env = {
     TURN_SECRET: process.env.TURN_SECRET || 'onshare-dev-turn-secret',
@@ -173,6 +224,72 @@ export function createServer(port = 8787) {
     const protocol = req.headers['x-forwarded-proto'] || 'http';
     const host = req.headers.host || `localhost:${port}`;
     const url = new URL(req.url, `${protocol}://${host}`);
+
+    // 1. Canonical host fix & 301 redirect for old domain (onshare-xvw4.onrender.com)
+    const hostHeader = (req.headers.host || '').toLowerCase();
+    if (hostHeader.includes('onrender.com')) {
+      if (url.pathname === '/robots.txt') {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'text/plain');
+        return res.end('User-agent: *\nDisallow: /\n');
+      }
+      res.statusCode = 301;
+      res.setHeader('Location', `https://onshare.me${req.url}`);
+      return res.end();
+    }
+
+    // 2. Dedicated Sitemap Route (renders inline in browser without prompting file download)
+    if (url.pathname === '/sitemap.xml') {
+      const sitemapPath = path.join(DIST_DIR, 'sitemap.xml');
+      if (fs.existsSync(sitemapPath)) {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'text/xml; charset=utf-8');
+        res.setHeader('Content-Disposition', 'inline');
+        res.setHeader('Cache-Control', 'no-cache');
+        return res.end(fs.readFileSync(sitemapPath));
+      }
+    }
+
+    // 3. First-party GA4 reverse proxy (ad-block / Brave resilient)
+    if (url.pathname === '/analytics/gtag.js') {
+      const targetUrl = 'https://www.googletagmanager.com/gtag/js?id=G-77T9MNGB02';
+      https.get(targetUrl, (proxyRes) => {
+        res.statusCode = proxyRes.statusCode || 200;
+        res.setHeader('Content-Type', 'application/javascript; charset=UTF-8');
+        res.setHeader('Cache-Control', 'public, max-age=7200');
+        proxyRes.pipe(res);
+      }).on('error', () => {
+        res.statusCode = 502;
+        res.end('/* analytics proxy error */');
+      });
+      return;
+    }
+
+    if (url.pathname === '/analytics/collect' || url.pathname === '/analytics/g/collect') {
+      const gaUrl = `https://www.google-analytics.com/g/collect${url.search}`;
+      const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+      const options = {
+        method: req.method,
+        headers: {
+          'user-agent': req.headers['user-agent'] || '',
+          'x-forwarded-for': clientIp,
+          'content-type': req.headers['content-type'] || 'text/plain',
+        }
+      };
+
+      const proxyReq = https.request(gaUrl, options, (proxyRes) => {
+        res.statusCode = proxyRes.statusCode || 204;
+        res.end();
+      });
+
+      proxyReq.on('error', () => {
+        res.statusCode = 204;
+        res.end();
+      });
+
+      req.pipe(proxyReq);
+      return;
+    }
 
     const headers = new Headers();
     for (const [key, value] of Object.entries(req.headers)) {
@@ -216,7 +333,8 @@ export function createServer(port = 8787) {
             const ext = path.extname(filePath).toLowerCase();
             res.statusCode = 200;
             res.setHeader('Content-Type', MIME_TYPES[ext] || 'application/octet-stream');
-            if (ext !== '.html') {
+            res.removeHeader('Content-Disposition');
+            if (ext !== '.html' && ext !== '.xml' && ext !== '.txt') {
               res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
             } else {
               res.setHeader('Cache-Control', 'no-cache');
@@ -224,13 +342,28 @@ export function createServer(port = 8787) {
             return res.end(fs.readFileSync(filePath));
           }
 
-          // SPA fallback to index.html for client routes (e.g. /send, /receive, /privacy)
+          // SPA fallback to index.html for client routes (with pre-rendered SEO injection)
           const indexPath = path.join(DIST_DIR, 'index.html');
           if (fs.existsSync(indexPath)) {
+            let html = fs.readFileSync(indexPath, 'utf-8');
+            const cleanPath = url.pathname.replace(/\/+$/, '') || '/';
+            const seo = ROUTE_SEO[cleanPath] || ROUTE_SEO['/'];
+
+            html = html
+              .replace(/<title>.*?<\/title>/, `<title>${seo.title}</title>`)
+              .replace(/<meta name="description" content=".*?" \/>/, `<meta name="description" content="${seo.description}" />`)
+              .replace(/<link rel="canonical" href=".*?" \/>/, `<link rel="canonical" href="${seo.canonical}" />`)
+              .replace(/<meta property="og:title" content=".*?" \/>/, `<meta property="og:title" content="${seo.title}" />`)
+              .replace(/<meta property="og:description" content=".*?" \/>/, `<meta property="og:description" content="${seo.description}" />`)
+              .replace(/<meta property="og:url" content=".*?" \/>/, `<meta property="og:url" content="${seo.canonical}" />`)
+              .replace(/<meta name="twitter:title" content=".*?" \/>/, `<meta name="twitter:title" content="${seo.title}" />`)
+              .replace(/<meta name="twitter:description" content=".*?" \/>/, `<meta name="twitter:description" content="${seo.description}" />`)
+              .replace(/<meta name="twitter:url" content=".*?" \/>/, `<meta name="twitter:url" content="${seo.canonical}" />`);
+
             res.statusCode = 200;
             res.setHeader('Content-Type', 'text/html; charset=utf-8');
             res.setHeader('Cache-Control', 'no-cache');
-            return res.end(fs.readFileSync(indexPath));
+            return res.end(html);
           }
         } catch {
           // Fall through to worker handler
