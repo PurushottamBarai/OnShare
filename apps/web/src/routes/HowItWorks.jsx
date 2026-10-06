@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import AdSlot from '../components/AdSlot.jsx';
 
 export default function HowItWorks() {
   const { t } = useTranslation();
@@ -90,6 +91,8 @@ export default function HowItWorks() {
           </div>
         </div>
 
+        {/* Non-intrusive sponsor / ad slot */}
+        <AdSlot height="100px" className="mt-8" />
       </div>
     </main>
   );

@@ -93,4 +93,63 @@ describe('Home Screen & Shared UI Components (UI Brief sections 3 & 4.1)', () =>
       expect(screen.getByText('Shared UI Components')).toBeDefined();
     });
   });
+
+  describe('DashboardSend Capacity Limits', () => {
+    it('displays Max 35GB badge and exports capacity limits', async () => {
+      const { default: DashboardSend, MAX_SINGLE_FILE_BYTES, MAX_ZIP_TOTAL_BYTES } = await import('../src/components/DashboardSend.jsx');
+      expect(MAX_SINGLE_FILE_BYTES).toBe(35 * 1024 * 1024 * 1024);
+      expect(MAX_ZIP_TOTAL_BYTES).toBe(4 * 1024 * 1024 * 1024);
+
+      render(
+        <MemoryRouter>
+          <DashboardSend />
+        </MemoryRouter>
+      );
+      expect(screen.getByText('Max 35GB')).toBeDefined();
+      expect(screen.getByText('Broadcast Mode')).toBeDefined();
+    });
+  });
+
+  describe('Broadcast Mode UI', () => {
+    it('renders Broadcast Mode switch in DashboardSend and switches to Send button', async () => {
+      const { default: DashboardSend } = await import('../src/components/DashboardSend.jsx');
+      const { fireEvent } = await import('@testing-library/react');
+      render(
+        <MemoryRouter>
+          <DashboardSend />
+        </MemoryRouter>
+      );
+
+      const toggle = screen.getByRole('switch');
+      expect(toggle).toBeDefined();
+
+      // Click broadcast toggle
+      fireEvent.click(toggle);
+
+      // Now "Send" button with send icon is rendered instead of code entry input
+      const sendBtn = screen.getByRole('button', { name: /send/i });
+      expect(sendBtn).toBeDefined();
+    });
+
+    it('renders Option 1 layout in DashboardReceive with sender input and direct code', async () => {
+      const { default: DashboardReceive } = await import('../src/components/DashboardReceive.jsx');
+      render(
+        <MemoryRouter>
+          <DashboardReceive />
+        </MemoryRouter>
+      );
+
+      // Top: Enter code from sender
+      expect(screen.getByText('Enter code from sender')).toBeDefined();
+      expect(screen.getByPlaceholderText('Enter the code')).toBeDefined();
+      expect(screen.getByRole('button', { name: /receive/i })).toBeDefined();
+
+      // Divider
+      expect(screen.getByText('or')).toBeDefined();
+
+      // Bottom: Direct receive code card
+      expect(screen.getByText('Your direct receive code')).toBeDefined();
+    });
+  });
 });
+

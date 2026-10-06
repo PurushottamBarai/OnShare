@@ -66,6 +66,28 @@ export class SenderPipeline {
     this.totalBytesTarget = this.files.reduce((acc, f) => acc + (f.size || 0), 0);
     this.startTime = null;
 
+    this.receiverAcknowledgedBytes = 0;
+    this.maxInFlightBytes = 4 * 1024 * 1024; // 4 MiB sliding window
+    this.notifyAckReceived = null;
+
+    if (this.controlChannel) {
+      this.handleControlMessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'progress' && typeof msg.bytesReceived === 'number') {
+            this.receiverAcknowledgedBytes = msg.bytesReceived;
+            if (this.notifyAckReceived) {
+              this.notifyAckReceived();
+              this.notifyAckReceived = null;
+            }
+          }
+        } catch {
+          // ignore non-json or other control messages
+        }
+      };
+      this.controlChannel.addEventListener('message', this.handleControlMessage);
+    }
+
     if (this.dataChannel) {
       this.dataChannel.bufferedAmountLowThreshold = 256 * 1024; // 256 KiB
     }
@@ -73,11 +95,20 @@ export class SenderPipeline {
 
   cancel() {
     this.isCancelled = true;
-    if (this.controlChannel && this.controlChannel.readyState === 'open') {
-      try {
-        this.controlChannel.send(JSON.stringify({ type: 'cancel' }));
-      } catch {
-        // ignore
+    if (this.notifyAckReceived) {
+      this.notifyAckReceived();
+      this.notifyAckReceived = null;
+    }
+    if (this.controlChannel) {
+      if (this.handleControlMessage) {
+        this.controlChannel.removeEventListener('message', this.handleControlMessage);
+      }
+      if (this.controlChannel.readyState === 'open') {
+        try {
+          this.controlChannel.send(JSON.stringify({ type: 'cancel' }));
+        } catch {
+          // ignore
+        }
       }
     }
   }
@@ -85,19 +116,52 @@ export class SenderPipeline {
   async waitForBufferDrain() {
     if (!this.dataChannel || this.dataChannel.bufferedAmount <= 256 * 1024) return;
     return new Promise((resolve) => {
-      const onLow = () => {
-        this.dataChannel.removeEventListener('bufferedamountlow', onLow);
+      let resolved = false;
+      let timer = null;
+
+      const cleanup = () => {
+        if (resolved) return;
+        resolved = true;
+        if (timer) clearInterval(timer);
+        this.dataChannel?.removeEventListener('bufferedamountlow', onLow);
         resolve();
       };
+
+      const onLow = () => cleanup();
+
       this.dataChannel.addEventListener('bufferedamountlow', onLow);
+
+      // Dual-trigger polling fallback every 30ms prevents edge-trigger deadlock
+      timer = setInterval(() => {
+        if (
+          !this.dataChannel ||
+          this.dataChannel.readyState !== 'open' ||
+          this.dataChannel.bufferedAmount <= 256 * 1024 ||
+          this.isCancelled
+        ) {
+          cleanup();
+        }
+      }, 30);
     });
   }
 
   async sendFrame(payload, offset, isFinal) {
     if (this.isCancelled) throw new Error('Transfer cancelled');
 
+    // 1. DataChannel buffer backpressure with dual-trigger drain
     if (this.dataChannel.bufferedAmount > 1024 * 1024) {
       await this.waitForBufferDrain();
+    }
+
+    // 2. Application-level sliding window pacing against receiver ACKs
+    if (
+      this.totalBytesTarget > this.maxInFlightBytes &&
+      this.totalBytesSent - this.receiverAcknowledgedBytes > this.maxInFlightBytes
+    ) {
+      await Promise.race([
+        new Promise((res) => { this.notifyAckReceived = res; }),
+        new Promise((res) => setTimeout(res, 150)),
+      ]);
     }
 
     if (this.isCancelled) throw new Error('Transfer cancelled');

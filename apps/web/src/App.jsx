@@ -347,14 +347,6 @@ export default function App() {
             <Link to="/feedback" className="hover:text-text-primary">
               {t("footer.feedback")}
             </Link>
-            <a
-              href="https://mediasaver-57yu.onrender.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-text-primary"
-            >
-              {t("footer.products") || "Products"}
-            </a>
           </div>
         </div>
       </footer>

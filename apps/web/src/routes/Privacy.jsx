@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import AdSlot from '../components/AdSlot.jsx';
 
 export default function Privacy() {
   const { t } = useTranslation();
@@ -71,6 +72,9 @@ export default function Privacy() {
             </p>
           </section>
         </div>
+
+        {/* Non-intrusive sponsor / ad slot */}
+        <AdSlot height="100px" className="mt-8" />
       </div>
     </main>
   );

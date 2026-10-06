@@ -21,14 +21,22 @@ export default function DashboardReceive({ onTextSessionActive }) {
   const [manifest, setManifest] = useState(null);
 
   const [transferProgress, setTransferProgress] = useState({ percent: 0, bytesReceived: 0, totalSize: 0, speedBps: 0, timeRemainingSec: 0 });
+  const [joinCode, setJoinCode] = useState('');
+  const [joinError, setJoinError] = useState(null);
+  const [isJoining, setIsJoining] = useState(false);
+  const isJoiningRef = useRef(false);
 
   const signalingRef = useRef(null);
   const peerManagerRef = useRef(null);
   const receiverSinkRef = useRef(null);
 
-  const initReceiver = (forceNew = false) => {
+  const initReceiver = (forceNew = false, keepState = null) => {
     cleanup();
-    setReceiverState('CONNECTING');
+    if (keepState) {
+      setReceiverState(keepState);
+    } else {
+      setReceiverState('CONNECTING');
+    }
     setErrorMessage(null);
     setManifest(null);
     setTransferProgress({ percent: 0, bytesReceived: 0, totalSize: 0, speedBps: 0, timeRemainingSec: 0 });
@@ -55,7 +63,9 @@ export default function DashboardReceive({ onTextSessionActive }) {
 
     client.on('receiver.created', (payload) => {
       setCode(payload.code);
-      setReceiverState('WAITING');
+      if (!keepState) {
+        setReceiverState('WAITING');
+      }
       try {
         if (typeof window !== 'undefined' && window.sessionStorage) {
           sessionStorage.setItem('onshare_receiver_code', JSON.stringify({
@@ -69,6 +79,9 @@ export default function DashboardReceive({ onTextSessionActive }) {
     });
 
     client.on('receiver.matched', (payload) => {
+      setIsJoining(false);
+      isJoiningRef.current = false;
+      setJoinError(null);
       setReceiverState('MATCHED');
 
       peerManagerRef.current = new PeerManager({
@@ -101,13 +114,19 @@ export default function DashboardReceive({ onTextSessionActive }) {
     });
 
     client.on('session.closed', (payload) => {
-      if (receiverState !== 'DONE' && receiverState !== 'DECLINED' && receiverState !== 'TEXT_ACTIVE') {
+      if (receiverState !== 'DONE' && receiverState !== 'DECLINED' && receiverState !== 'TEXT_ACTIVE' && receiverState !== 'TRANSFERRING') {
         setReceiverState('FAILED');
         setErrorMessage(payload.reason === 'sender_ended' ? 'Sender ended the session.' : 'Sender disconnected.');
       }
     });
 
     client.on('error', (payload) => {
+      if (isJoiningRef.current) {
+        setIsJoining(false);
+        isJoiningRef.current = false;
+        setJoinError(payload.message || 'Invalid or expired code');
+        return;
+      }
       setReceiverState('FAILED');
       setErrorMessage(payload.message || 'An error occurred.');
     });
@@ -153,6 +172,18 @@ export default function DashboardReceive({ onTextSessionActive }) {
     initReceiver(true);
   };
 
+  const handleJoinBroadcast = (e) => {
+    e.preventDefault();
+    if (!joinCode || joinCode.length !== 6 || isJoining) return;
+    setJoinError(null);
+    setIsJoining(true);
+    isJoiningRef.current = true;
+    if (!signalingRef.current) {
+      initReceiver();
+    }
+    signalingRef.current?.joinBroadcast(joinCode);
+  };
+
   const handleAccept = async () => {
     if (!peerManagerRef.current || receiverSinkRef.current) return;
 
@@ -195,6 +226,15 @@ export default function DashboardReceive({ onTextSessionActive }) {
         onProgress: (p) => setTransferProgress(p),
         onComplete: () => {
           setReceiverState('DONE');
+          try {
+            if (typeof window !== 'undefined' && window.sessionStorage) {
+              sessionStorage.removeItem('onshare_receiver_code');
+            }
+          } catch {
+            // ignore
+          }
+          // Automatically regenerate fresh 6-digit code for the next transfer
+          initReceiver(true, 'DONE');
         },
         onError: (err) => {
           setReceiverState('FAILED');
@@ -228,7 +268,7 @@ export default function DashboardReceive({ onTextSessionActive }) {
   };
 
   return (
-    <div className="flex flex-col h-full space-y-6">
+    <div className="flex flex-col space-y-3.5">
       <div className="flex justify-between items-center px-1">
         <div className="flex items-center gap-2 font-bold uppercase text-text-primary text-sm tracking-wide">
           <svg className="w-5 h-5 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -239,40 +279,93 @@ export default function DashboardReceive({ onTextSessionActive }) {
         <span className="text-xs text-text-secondary font-medium">{t('dashboard.yourReceiveCode')}</span>
       </div>
 
-      <div className="w-full h-48 rounded-xl border border-border-subtle bg-bg-surface flex flex-col items-center justify-center shadow-sm">
-        <div className="text-4xl font-mono font-bold tracking-[0.5em] text-accent-primary mb-6 ml-4 select-all">
-          {code ? `${code.slice(0, 3)} ${code.slice(3)}` : '------'}
+      {/* Waiting / Connecting State: Option 1 Dual-Option Layout */}
+      {(receiverState === 'WAITING' || receiverState === 'CONNECTING') && (
+        <div className="space-y-3">
+          {/* Top: Enter code from sender inside container box */}
+          <div className="w-full py-4 px-4 rounded-xl border border-border-subtle bg-bg-surface flex flex-col items-center justify-center shadow-sm">
+            <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider mb-2.5">
+              {t('dashboard.enterSenderCode', 'Enter code from sender')}
+            </span>
+            <form onSubmit={handleJoinBroadcast} className="flex flex-col items-center w-full max-w-xs">
+              <div className="flex w-full">
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={joinCode}
+                  onChange={(e) => {
+                    setJoinCode(e.target.value.replace(/\D/g, ''));
+                    setJoinError(null);
+                  }}
+                  placeholder="Enter the code"
+                  disabled={isJoining}
+                  className="flex-1 px-4 py-2.5 rounded-l bg-bg-elevated border border-r-0 border-border-subtle focus:border-accent-primary text-text-primary font-mono text-sm tracking-widest placeholder:tracking-normal placeholder:font-sans focus:outline-none text-center"
+                />
+                <button
+                  type="submit"
+                  aria-label={t('dashboard.receiveBtn', 'Receive')}
+                  disabled={joinCode.length !== 6 || isJoining}
+                  className="px-4 py-2.5 rounded-r border border-l-0 border-accent-primary bg-accent-primary hover:bg-accent-hover disabled:opacity-50 text-bg-base font-semibold text-xs flex items-center justify-center transition-colors cursor-pointer"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                </button>
+              </div>
+              {joinError && <p className="text-xs text-status-error mt-1.5 text-center">{joinError}</p>}
+            </form>
+          </div>
+
+          {/* Divider */}
+          <div className="relative flex py-0.5 items-center">
+            <div className="flex-grow border-t border-border-subtle"></div>
+            <span className="flex-shrink mx-3 text-xs text-text-secondary font-medium lowercase">
+              {t('dashboard.orSenderConnects', 'or')}
+            </span>
+            <div className="flex-grow border-t border-border-subtle"></div>
+          </div>
+
+          {/* Bottom: Your direct receive code container box */}
+          <div className="w-full py-4 rounded-xl border border-border-subtle bg-bg-surface flex flex-col items-center justify-center shadow-sm">
+            <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider mb-2">
+              {t('dashboard.yourDirectCode', 'Your direct receive code')}
+            </span>
+            <div className="text-3xl font-mono font-bold tracking-[0.4em] text-accent-primary mb-3 ml-3 select-all">
+              {code ? `${code.slice(0, 3)} ${code.slice(3)}` : '------'}
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleRegenerate}
+                className="px-3.5 py-1.5 rounded text-xs font-medium bg-bg-elevated border border-border-subtle hover:border-accent-primary text-text-primary flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                Regenerate
+              </button>
+              <button
+                onClick={handleCopyCode}
+                className="px-3.5 py-1.5 rounded text-xs font-medium bg-bg-elevated border border-border-subtle hover:border-accent-primary text-text-primary flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                {copied ? (
+                  <>
+                    <svg className="w-3.5 h-3.5 text-status-success" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                    Copy
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
-        
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleRegenerate}
-            className="px-4 py-1.5 rounded text-sm font-medium bg-bg-elevated border border-border-subtle hover:border-accent-primary text-text-primary flex items-center gap-2 transition-colors cursor-pointer"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-            Regenerate
-          </button>
-          <button
-            onClick={handleCopyCode}
-            className="px-4 py-1.5 rounded text-sm font-medium bg-bg-elevated border border-border-subtle hover:border-accent-primary text-text-primary flex items-center gap-2 transition-colors cursor-pointer"
-          >
-            {copied ? (
-              <>
-                <svg className="w-4 h-4 text-status-success" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
-                Copied
-              </>
-            ) : (
-              <>
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                Copy
-              </>
-            )}
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* States rendering */}
-      <div className="flex-1">
+      {receiverState !== 'WAITING' && receiverState !== 'CONNECTING' && (
+        <div className="flex-1">
         {receiverState === 'AWAITING_ACCEPT' && manifest && (
           <div className="w-full p-4 rounded-lg bg-bg-surface border border-border-subtle shadow-sm flex flex-col gap-3">
             <div className="flex items-center justify-center py-1">
@@ -284,6 +377,12 @@ export default function DashboardReceive({ onTextSessionActive }) {
                 </p>
               )}
             </div>
+            {manifest.totalSize > 2 * 1024 * 1024 * 1024 && !(typeof window !== 'undefined' && 'showSaveFilePicker' in window) && (
+              <div className="text-xs p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-text-secondary leading-relaxed">
+                <span className="font-semibold text-amber-600 dark:text-amber-400">Large File Notice:</span>{' '}
+                {t('dashboard.largeFileNotice', 'This transfer exceeds 2GB. Desktop Chrome, Edge, or Brave is recommended for direct-to-disk saving to prevent browser memory limits.')}
+              </div>
+            )}
             <div className="flex gap-2">
               <button data-testid="receive-decline-btn" onClick={handleDecline} className="flex-1 py-1.5 rounded text-sm font-medium bg-bg-elevated border border-border-subtle text-text-primary hover:text-status-error transition-colors cursor-pointer">
                 {t('common.decline')}
@@ -317,7 +416,7 @@ export default function DashboardReceive({ onTextSessionActive }) {
               <svg className="w-5 h-5 text-status-success" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
               <span className="text-sm font-medium text-status-success">Transfer Complete</span>
             </div>
-            <button onClick={initReceiver} className="text-xs px-3 py-1 rounded bg-bg-surface border border-border-subtle hover:border-accent-primary transition-colors cursor-pointer">
+            <button onClick={() => setReceiverState('WAITING')} className="text-xs px-3 py-1 rounded bg-bg-surface border border-border-subtle hover:border-accent-primary transition-colors cursor-pointer">
               Reset
             </button>
           </div>
@@ -340,6 +439,7 @@ export default function DashboardReceive({ onTextSessionActive }) {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

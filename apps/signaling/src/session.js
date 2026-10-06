@@ -1,5 +1,5 @@
 import { parseAndValidateMessage, ERROR_CODES } from '@onshare/protocol';
-import { sendWsMessage, createWebSocketResponse } from './utils.js';
+import { sendWsMessage, createWebSocketResponse, generate6DigitCode } from './utils.js';
 import { generateIceServers } from './turn.js';
 
 /**
@@ -27,11 +27,19 @@ export class Session {
 
     // Caps
     this.maxReceivers = 10; // Default cap 10, hard cap 20 (TRD 4.2)
+    this.maxBroadcastReceivers = 50; // Broadcast max 50 receivers
 
     // Timers
     this.validityMinutes = 60; // Default 60 minutes
     this.sessionTimeout = null;
     this.senderGraceTimeout = null;
+    this.safetyTimeout = null;
+    this.isJoiningExpired = false;
+    this.joiningExpiresAt = 0;
+
+    // Broadcast Mode
+    this.broadcastCode = null;
+    this.broadcastExpiresAt = 0;
 
     // Buffer for early signaling messages (offers/ICE) arriving before receiver joins socket
     this.pendingSignals = new Map(); // receiverId -> Array<{ type, payload, id }>
@@ -49,6 +57,38 @@ export class Session {
         receiverCount: this.receivers.size,
         hasSender: !!this.senderSocket,
       });
+    }
+
+    // Internal HTTP endpoint: Broadcast receiver joined via OTP room
+    if (url.pathname === '/join-broadcast-receiver') {
+      const body = await request.json().catch(() => ({}));
+      const { receiverId, joinToken } = body;
+      if (!receiverId || !joinToken) {
+        return Response.json({ success: false, error: 'Missing receiverId or joinToken' }, { status: 400 });
+      }
+      if (this.isJoiningExpired || (this.joiningExpiresAt && Date.now() > this.joiningExpiresAt)) {
+        return Response.json({ success: false, error: 'Broadcast joining window has expired' }, { status: 410 });
+      }
+      if (this.receivers.size >= this.maxBroadcastReceivers) {
+        await this.expireBroadcastCode();
+        return Response.json({ success: false, error: 'Broadcast session full (max 50 receivers reached)' }, { status: 429 });
+      }
+      const now = Date.now();
+      this.receivers.set(receiverId, {
+        joinToken,
+        socket: null,
+        state: 'CONNECTING',
+        matchedAt: now,
+      });
+      // Notify sender socket that a receiver joined via broadcast code
+      if (this.senderSocket) {
+        const iceServers = await generateIceServers(this.sessionId, this.env);
+        sendWsMessage(this.senderSocket, 'session.receiverMatched', {
+          receiverId,
+          iceServers,
+        });
+      }
+      return Response.json({ success: true });
     }
 
     // WebSocket upgrade
@@ -128,15 +168,16 @@ export class Session {
       if (validityParam && [2, 5, 10, 30, 60].includes(validityParam)) {
         this.validityMinutes = validityParam;
       }
+      this.joiningExpiresAt = Date.now() + this.validityMinutes * 60 * 1000;
       const modeParam = url.searchParams.get('mode');
       if (modeParam === 'text' || modeParam === 'files') {
         this.mode = modeParam;
       }
 
-      // Schedule session max lifetime timer (TRD 4.4)
+      // Schedule session joining window expiry timer
       if (this.sessionTimeout) clearTimeout(this.sessionTimeout);
       this.sessionTimeout = setTimeout(() => {
-        this.closeSession('session_expired');
+        this.handleJoiningTimeout();
       }, this.validityMinutes * 60 * 1000);
       this.sessionTimeout.unref();
     }
@@ -187,6 +228,21 @@ export class Session {
       case 'session.addReceiver': {
         const { code } = msg.payload;
         await this.handleAddReceiver(code, msg.id);
+        break;
+      }
+
+      case 'session.createBroadcast': {
+        await this.handleCreateBroadcast(msg.id);
+        break;
+      }
+
+      case 'session.regenerateBroadcast': {
+        await this.handleRegenerateBroadcast(msg.id);
+        break;
+      }
+
+      case 'session.invalidateBroadcast': {
+        await this.expireBroadcastCode();
         break;
       }
 
@@ -259,11 +315,11 @@ export class Session {
   async handleAddReceiver(code, msgId) {
     const now = Date.now();
 
-    // 1. Check session state
-    if (this.sessionState !== 'ACTIVE') {
+    // 1. Check session state and joining window
+    if (this.sessionState !== 'ACTIVE' || this.isJoiningExpired || (this.joiningExpiresAt && now > this.joiningExpiresAt)) {
       sendWsMessage(this.senderSocket, 'error', {
         code: ERROR_CODES.SESSION_EXPIRED,
-        message: 'Session is not active',
+        message: 'Session joining window has expired',
       }, msgId);
       return;
     }
@@ -362,6 +418,60 @@ export class Session {
     }, msgId);
   }
 
+  async handleCreateBroadcast(msgId) {
+    if (this.sessionState !== 'ACTIVE') {
+      sendWsMessage(this.senderSocket, 'error', {
+        code: ERROR_CODES.SESSION_EXPIRED,
+        message: 'Session is not active',
+      }, msgId);
+      return;
+    }
+
+    if (!this.env?.OTP_ROOM) {
+      sendWsMessage(this.senderSocket, 'error', {
+        code: ERROR_CODES.INTERNAL_ERROR,
+        message: 'OTP service unavailable',
+      }, msgId);
+      return;
+    }
+
+    const code = generate6DigitCode();
+    const iceServers = await generateIceServers(this.sessionId, this.env);
+    const expiresAt = Date.now() + (this.validityMinutes || 60) * 60 * 1000;
+
+    const namespace = this.workerNamespace || 'default';
+    const otpKey = namespace !== 'default' ? `${namespace}:${code}` : code;
+    const otpStub = this.env.OTP_ROOM.get(this.env.OTP_ROOM.idFromName(otpKey));
+
+    const registerRes = await otpStub.fetch(new Request('http://internal/register-broadcast', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code,
+        sessionId: this.sessionId,
+        iceServers,
+        expiresAt,
+      }),
+    }));
+
+    if (!registerRes.ok) {
+      sendWsMessage(this.senderSocket, 'error', {
+        code: ERROR_CODES.INTERNAL_ERROR,
+        message: 'Failed to create broadcast room',
+      }, msgId);
+      return;
+    }
+
+    this.broadcastCode = code;
+    this.broadcastExpiresAt = expiresAt;
+
+    sendWsMessage(this.senderSocket, 'session.broadcastCreated', {
+      code,
+      sessionId: this.sessionId,
+      expiresAt,
+    }, msgId);
+  }
+
   async setupReceiverSocket(serverWs, sessionId, joinToken) {
     // Find receiver entry by joinToken
     let matchedReceiverId = null;
@@ -444,7 +554,73 @@ export class Session {
           });
         }
       }
+
+      // If joining window has already expired and all active transfers finished, close session
+      if (this.isJoiningExpired && !this.hasActiveReceivers()) {
+        this.closeSession('session_expired');
+      }
     });
+  }
+
+  hasActiveReceivers() {
+    for (const [, entry] of this.receivers.entries()) {
+      if (entry.socket && entry.socket.readyState === 1) {
+        return true;
+      }
+      if (entry.state === 'CONNECTING' || entry.state === 'WAITING_ACCEPT') {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  async expireBroadcastCode() {
+    if (this.broadcastCode) {
+      const namespace = this.workerNamespace || 'default';
+      const otpKey = namespace !== 'default' ? `${namespace}:${this.broadcastCode}` : this.broadcastCode;
+      try {
+        const otpStub = this.env.OTP_ROOM.get(this.env.OTP_ROOM.idFromName(otpKey));
+        await otpStub.fetch(new Request('http://internal/expire', { method: 'POST' }));
+      } catch {
+        // ignore
+      }
+      this.broadcastCode = null;
+    }
+  }
+
+  async handleRegenerateBroadcast(msgId) {
+    if (this.sessionState !== 'ACTIVE') {
+      sendWsMessage(this.senderSocket, 'error', {
+        code: ERROR_CODES.SESSION_EXPIRED,
+        message: 'Session is not active',
+      }, msgId);
+      return;
+    }
+
+    // 1. Expire old broadcast code in OTP room so no new receiver can use it
+    await this.expireBroadcastCode();
+
+    // 2. Generate and register fresh broadcast code
+    await this.handleCreateBroadcast(msgId);
+  }
+
+  async handleJoiningTimeout() {
+    this.isJoiningExpired = true;
+
+    // Expire broadcast room in OTP_ROOM so no new receivers can use code
+    await this.expireBroadcastCode();
+
+    // If there are still active receivers transferring, keep session alive
+    if (this.hasActiveReceivers()) {
+      // Set safety backstop timer (120 minutes) to prevent leaks if connections hang
+      if (this.safetyTimeout) clearTimeout(this.safetyTimeout);
+      this.safetyTimeout = setTimeout(() => {
+        this.closeSession('session_expired');
+      }, 120 * 60 * 1000);
+      this.safetyTimeout?.unref?.();
+    } else {
+      this.closeSession('session_expired');
+    }
   }
 
   closeSession(reason = 'closed') {
@@ -457,6 +633,10 @@ export class Session {
     if (this.senderGraceTimeout) {
       clearTimeout(this.senderGraceTimeout);
       this.senderGraceTimeout = null;
+    }
+    if (this.safetyTimeout) {
+      clearTimeout(this.safetyTimeout);
+      this.safetyTimeout = null;
     }
 
     // Notify sender

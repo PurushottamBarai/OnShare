@@ -55,7 +55,20 @@
     "sendViaShareCode": "Send via share code...",
     "selectValidCode": "Please enter a valid 6-digit code.",
     "peerDisconnected": "Peer disconnected.",
-    "connectionFailed": "Connection failed."
+    "connectionFailed": "Connection failed.",
+    "fileCapacityExceeded": "File capacity exceeded, Max Capacity 35GB",
+    "zipCapacityExceeded": "Multiple files are zipped (Max 4GB). Please send files larger than 4GB individually (up to 35GB).",
+    "largeFileNotice": "Large File Notice: This transfer exceeds 2GB. Desktop Chrome, Edge, or Brave is recommended for direct-to-disk saving to prevent browser memory limits.",
+    "textLimitNotice": "Maximum text limit reached (500,000 characters). For larger documents, please use the Send Files tab (up to 35GB).",
+    "liveNotepad": "Live Notepad",
+    "broadcastMode": "Broadcast Mode",
+    "enterSenderCode": "Enter code from sender",
+    "yourDirectCode": "Your direct receive code",
+    "orSenderConnects": "or",
+    "selectFilesFirst": "Please select at least one file to send",
+    "enterTextFirst": "Please enter some text to send",
+    "receiveBtn": "Receive",
+    "broadcastCode": "Broadcast Code"
   },
   "consent": {
     "title": "Your Privacy on OnShare",

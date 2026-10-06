@@ -11,7 +11,6 @@ export class OtpRoom {
     this.state = state;
     this.env = env;
 
-    // In-memory state per TRD section 3 ("no database")
     this.receiverSocket = null;
     this.code = null;
     this.expiresAt = 0;
@@ -19,6 +18,12 @@ export class OtpRoom {
     this.receiverId = null;
     this.expiryTimeout = null;
     this.disconnectTimeout = null;
+
+    // Broadcast room support
+    this.isBroadcast = false;
+    this.broadcastSessionId = null;
+    this.broadcastIceServers = [];
+    this.workerNamespace = (typeof process !== 'undefined' && process.env?.TEST_WORKER_INDEX) || 'default';
   }
 
   async fetch(request) {
@@ -58,6 +63,18 @@ export class OtpRoom {
       return Response.json({ success: true, expired: true });
     }
 
+    // 1c. Internal HTTP endpoint: Register broadcast room created by sender
+    if (url.pathname === '/register-broadcast') {
+      const body = await request.json().catch(() => ({}));
+      this.isBroadcast = true;
+      this.code = body.code;
+      this.broadcastSessionId = body.sessionId;
+      this.broadcastIceServers = body.iceServers || [];
+      this.roomState = 'WAITING';
+      this.expiresAt = body.expiresAt || (Date.now() + 30 * 60 * 1000);
+      return Response.json({ success: true });
+    }
+
     // 2. Internal HTTP endpoint: Session consumes code
     if (url.pathname === '/consume') {
       const now = Date.now();
@@ -75,6 +92,20 @@ export class OtpRoom {
           error: ERROR_CODES.OTP_EXPIRED,
           message: 'Code has expired',
         }, { status: 410 });
+      }
+
+      if (this.isBroadcast) {
+        // Multi-use broadcast code: generate a new joinToken and receiverId each time
+        const joinToken = crypto.randomUUID();
+        const receiverId = `recv_${crypto.randomUUID().slice(0, 8)}`;
+        return Response.json({
+          success: true,
+          receiverId,
+          joinToken,
+          sessionId: this.broadcastSessionId,
+          iceServers: this.broadcastIceServers,
+          isBroadcast: true,
+        });
       }
 
       if (this.roomState !== 'WAITING' || !this.receiverSocket) {
@@ -131,6 +162,8 @@ export class OtpRoom {
   handleReceiverWebSocket(request) {
     const url = new URL(request.url);
     const code = url.searchParams.get('code') || this.code;
+    const ns = url.searchParams.get('workerNamespace');
+    if (ns) this.workerNamespace = ns;
 
     // Platform WebSocket pair creation
     let client, server;
@@ -237,6 +270,66 @@ export class OtpRoom {
               message: 'Code invalidated; create a new receiver code',
             });
             break;
+
+          case 'receiver.joinCode': {
+            const targetCode = msg.payload?.code;
+            if (!targetCode) {
+              sendWsMessage(serverWs, 'error', {
+                code: ERROR_CODES.BAD_MESSAGE,
+                message: 'Missing code',
+              }, msg.id);
+              break;
+            }
+
+            const namespace = this.workerNamespace || 'default';
+            const otpKey = namespace !== 'default' ? `${namespace}:${targetCode}` : targetCode;
+            const targetOtpStub = this.env?.OTP_ROOM?.get(this.env.OTP_ROOM.idFromName(otpKey));
+
+            if (!targetOtpStub) {
+              sendWsMessage(serverWs, 'error', {
+                code: ERROR_CODES.OTP_INVALID,
+                message: 'OTP service unavailable',
+              }, msg.id);
+              break;
+            }
+
+            const consumeRes = await targetOtpStub.fetch(new Request('http://internal/consume', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                sessionId: 'lookup',
+              }),
+            }));
+
+            const consumeData = await consumeRes.json().catch(() => ({}));
+
+            if (!consumeRes.ok || !consumeData.success) {
+              sendWsMessage(serverWs, 'error', {
+                code: consumeData.error || ERROR_CODES.OTP_INVALID,
+                message: consumeData.message || 'Invalid or expired code',
+              }, msg.id);
+              break;
+            }
+
+            const { sessionId, joinToken, receiverId, iceServers } = consumeData;
+
+            // Notify target session that a receiver joined
+            const sessionStub = this.env?.SESSION?.get(this.env.SESSION.idFromName(sessionId));
+            if (sessionStub) {
+              await sessionStub.fetch(new Request('http://internal/join-broadcast-receiver', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ receiverId, joinToken }),
+              })).catch(() => {});
+            }
+
+            sendWsMessage(serverWs, 'receiver.matched', {
+              sessionId,
+              joinToken,
+              iceServers: iceServers || [],
+            }, msg.id);
+            break;
+          }
 
           default:
             // Unexpected messages on OTP socket

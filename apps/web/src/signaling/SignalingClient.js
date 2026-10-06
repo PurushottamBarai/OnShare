@@ -182,6 +182,10 @@ export class SignalingClient {
           this.emit('receiver.created', msg.payload);
           break;
 
+        case 'session.broadcastCreated':
+          this.emit('session.broadcastCreated', msg.payload);
+          break;
+
         case 'receiver.matched':
           this.sessionId = msg.payload.sessionId;
           this.iceServers = msg.payload.iceServers;
@@ -296,6 +300,34 @@ export class SignalingClient {
    */
   addReceiver(code) {
     return this.send('session.addReceiver', { code });
+  }
+
+  /**
+   * Sender creates a broadcast code (multi-receiver)
+   */
+  createBroadcastCode() {
+    return this.send('session.createBroadcast', {});
+  }
+
+  /**
+   * Sender regenerates a broadcast code (invalidates old code, keeps peers)
+   */
+  regenerateBroadcast() {
+    return this.send('session.regenerateBroadcast', {});
+  }
+
+  /**
+   * Sender invalidates the broadcast code (e.g. when file list is modified)
+   */
+  invalidateBroadcast() {
+    return this.send('session.invalidateBroadcast', {});
+  }
+
+  /**
+   * Receiver joins via sender's broadcast code
+   */
+  joinBroadcast(code) {
+    return this.send('receiver.joinCode', { code });
   }
 
   /**

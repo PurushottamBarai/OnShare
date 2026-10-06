@@ -233,6 +233,59 @@ describe('Signaling Service Integration Flows (TRD Section 15)', () => {
     expect(errorMsg.payload.code).toBe(ERROR_CODES.OTP_EXPIRED);
   });
 
+  it('covers EXPIRY flow: preserves active transfers when joining window expires, closing only after receivers finish', async () => {
+    // 1. Create receiver
+    const receiverReq = new Request('https://signaling.local/ws/receiver', {
+      headers: { Upgrade: 'websocket' },
+    });
+    const receiverRes = await worker.fetch(receiverReq, env);
+    const receiverWs = receiverRes.webSocket;
+    const createdMsg = await waitForMessage(receiverWs, 'receiver.created');
+    const { code } = createdMsg.payload;
+
+    // 2. Sender connects with validity=2
+    const senderReq = new Request('https://signaling.local/ws/session?validity=2', {
+      headers: { Upgrade: 'websocket' },
+    });
+    const senderRes = await worker.fetch(senderReq, env);
+    const senderWs = senderRes.webSocket;
+    const { sessionId } = (await waitForMessage(senderWs, 'session.created')).payload;
+
+    // 3. Sender adds receiver
+    senderWs.send(serializeMessage('session.addReceiver', { code }));
+    const receiverMatched = await waitForMessage(receiverWs, 'receiver.matched');
+    const { joinToken } = receiverMatched.payload;
+
+    const matchedMsg = await waitForMessage(senderWs, 'session.receiverMatched');
+    expect(matchedMsg.payload.receiverId).toBeDefined();
+
+    // 4. Receiver joins session socket
+    const joinReq = new Request(`https://signaling.local/ws/join?sessionId=${sessionId}&joinToken=${joinToken}`, {
+      headers: { Upgrade: 'websocket' },
+    });
+    const joinRes = await worker.fetch(joinReq, env);
+    const joinedReceiverWs = joinRes.webSocket;
+
+    // Verify session has active receiver
+    const sessionStub = env.SESSION.get(env.SESSION.idFromName(sessionId));
+    const sessionInstance = sessionStub.instance;
+    expect(sessionInstance.hasActiveReceivers()).toBe(true);
+
+    // 5. Simulate joining window timeout firing while receiver is actively transferring
+    await sessionInstance.handleJoiningTimeout();
+
+    // Joining is expired, but session is NOT closed because active receiver is still transferring!
+    expect(sessionInstance.isJoiningExpired).toBe(true);
+    expect(sessionInstance.sessionState).toBe('ACTIVE');
+
+    // 6. Receiver finishes transfer and disconnects
+    joinedReceiverWs.close();
+
+    // Now all active receivers have finished, so session closes cleanly
+    await new Promise(r => setTimeout(r, 50));
+    expect(sessionInstance.sessionState).toBe('CLOSED');
+  });
+
   // 4. RECONNECT FLOW (TRD 4.4 & 15)
   it('covers RECONNECT flow: sender disconnects and reclaims session within 60s grace period', async () => {
     // Sender creates session
@@ -354,5 +407,157 @@ describe('Signaling Service Integration Flows (TRD Section 15)', () => {
 
     expect(resumedCode).toBe(originalCode);
     expect(resumedExpiresAt).toBe(originalExpiresAt);
+  });
+
+  // 8. BROADCAST MODE FLOW
+  it('covers BROADCAST flow: sender creates broadcast code and receivers join using receiver.joinCode', async () => {
+    // 1. Sender creates session
+    const senderReq = new Request('https://signaling.local/ws/session', {
+      headers: { Upgrade: 'websocket' },
+    });
+    const senderRes = await worker.fetch(senderReq, env);
+    const senderWs = senderRes.webSocket;
+    const { sessionId } = (await waitForMessage(senderWs, 'session.created')).payload;
+
+    // 2. Sender requests broadcast code
+    senderWs.send(serializeMessage('session.createBroadcast', {}));
+    const broadcastMsg = await waitForMessage(senderWs, 'session.broadcastCreated');
+    expect(broadcastMsg.payload.code).toBeDefined();
+    expect(broadcastMsg.payload.code).toMatch(/^\d{6}$/);
+    expect(broadcastMsg.payload.sessionId).toBe(sessionId);
+
+    const broadcastCode = broadcastMsg.payload.code;
+
+    // 3. First receiver connects and joins via broadcast code
+    const recvReq1 = new Request('https://signaling.local/ws/receiver', {
+      headers: { Upgrade: 'websocket' },
+    });
+    const recvRes1 = await worker.fetch(recvReq1, env);
+    const recvWs1 = recvRes1.webSocket;
+    await waitForMessage(recvWs1, 'receiver.created');
+
+    const senderMatchPromise1 = waitForMessage(senderWs, 'session.receiverMatched');
+    const recvMatchPromise1 = waitForMessage(recvWs1, 'receiver.matched');
+    recvWs1.send(serializeMessage('receiver.joinCode', { code: broadcastCode }));
+
+    const [senderMatched1, match1] = await Promise.all([senderMatchPromise1, recvMatchPromise1]);
+    expect(match1.payload.sessionId).toBe(sessionId);
+    expect(match1.payload.joinToken).toBeDefined();
+    expect(senderMatched1.payload.receiverId).toBeDefined();
+
+    // 4. Second receiver also joins via the same broadcast code
+    const recvReq2 = new Request('https://signaling.local/ws/receiver', {
+      headers: { Upgrade: 'websocket' },
+    });
+    const recvRes2 = await worker.fetch(recvReq2, env);
+    const recvWs2 = recvRes2.webSocket;
+    await waitForMessage(recvWs2, 'receiver.created');
+
+    const senderMatchPromise2 = waitForMessage(senderWs, 'session.receiverMatched');
+    const recvMatchPromise2 = waitForMessage(recvWs2, 'receiver.matched');
+    recvWs2.send(serializeMessage('receiver.joinCode', { code: broadcastCode }));
+
+    const [senderMatched2, match2] = await Promise.all([senderMatchPromise2, recvMatchPromise2]);
+    expect(match2.payload.sessionId).toBe(sessionId);
+    expect(match2.payload.joinToken).toBeDefined();
+    expect(match2.payload.joinToken).not.toBe(match1.payload.joinToken);
+    expect(senderMatched2.payload.receiverId).toBeDefined();
+  });
+
+  it('covers BROADCAST REGENERATE flow: regenerating code creates fresh code and invalidates old code', async () => {
+    // 1. Sender connects and creates broadcast code
+    const senderReq = new Request('https://signaling.local/ws/session?mode=files', {
+      headers: { Upgrade: 'websocket' },
+    });
+    const senderRes = await worker.fetch(senderReq, env);
+    const senderWs = senderRes.webSocket;
+    const { sessionId } = (await waitForMessage(senderWs, 'session.created')).payload;
+
+    senderWs.send(serializeMessage('session.createBroadcast', {}));
+    const createdMsg1 = await waitForMessage(senderWs, 'session.broadcastCreated');
+    const oldCode = createdMsg1.payload.code;
+
+    // 2. First receiver joins via oldCode
+    const recvReq1 = new Request('https://signaling.local/ws/receiver', {
+      headers: { Upgrade: 'websocket' },
+    });
+    const recvRes1 = await worker.fetch(recvReq1, env);
+    const recvWs1 = recvRes1.webSocket;
+    await waitForMessage(recvWs1, 'receiver.created');
+
+    const senderMatchPromise = waitForMessage(senderWs, 'session.receiverMatched');
+    const recvMatchPromise = waitForMessage(recvWs1, 'receiver.matched');
+    recvWs1.send(serializeMessage('receiver.joinCode', { code: oldCode }));
+    await Promise.all([senderMatchPromise, recvMatchPromise]);
+
+    // 3. Sender regenerates broadcast code
+    senderWs.send(serializeMessage('session.regenerateBroadcast', {}));
+    const createdMsg2 = await waitForMessage(senderWs, 'session.broadcastCreated');
+    const newCode = createdMsg2.payload.code;
+    expect(newCode).toBeDefined();
+    expect(newCode).not.toBe(oldCode);
+
+    // 4. Joining with oldCode is now rejected
+    const recvReqOld = new Request('https://signaling.local/ws/receiver', {
+      headers: { Upgrade: 'websocket' },
+    });
+    const recvResOld = await worker.fetch(recvReqOld, env);
+    const recvWsOld = recvResOld.webSocket;
+    await waitForMessage(recvWsOld, 'receiver.created');
+
+    recvWsOld.send(serializeMessage('receiver.joinCode', { code: oldCode }));
+    const oldCodeError = await waitForMessage(recvWsOld, 'error');
+    expect(oldCodeError.payload.code).toBe(ERROR_CODES.OTP_EXPIRED);
+
+    // 5. Joining with newCode succeeds
+    const recvReqNew = new Request('https://signaling.local/ws/receiver', {
+      headers: { Upgrade: 'websocket' },
+    });
+    const recvResNew = await worker.fetch(recvReqNew, env);
+    const recvWsNew = recvResNew.webSocket;
+    await waitForMessage(recvWsNew, 'receiver.created');
+
+    const senderMatchPromise2 = waitForMessage(senderWs, 'session.receiverMatched');
+    const recvMatchPromise2 = waitForMessage(recvWsNew, 'receiver.matched');
+    recvWsNew.send(serializeMessage('receiver.joinCode', { code: newCode }));
+    const [, matchNew] = await Promise.all([senderMatchPromise2, recvMatchPromise2]);
+    expect(matchNew.payload.sessionId).toBe(sessionId);
+  });
+
+  it('covers BROADCAST CAP flow: enforces maximum 50 receivers per session', async () => {
+    const senderReq = new Request('https://signaling.local/ws/session?mode=files', {
+      headers: { Upgrade: 'websocket' },
+    });
+    const senderRes = await worker.fetch(senderReq, env);
+    const senderWs = senderRes.webSocket;
+    const { sessionId } = (await waitForMessage(senderWs, 'session.created')).payload;
+
+    senderWs.send(serializeMessage('session.createBroadcast', {}));
+    await waitForMessage(senderWs, 'session.broadcastCreated');
+
+    // Simulate 50 active receivers already joined
+    const sessionStub = env.SESSION.get(env.SESSION.idFromName(sessionId));
+    for (let i = 0; i < 50; i++) {
+      sessionStub.instance.receivers.set(`mock_recv_${i}`, {
+        joinToken: `token_${i}`,
+        socket: null,
+        state: 'WAITING_ACCEPT',
+      });
+    }
+
+    // 51st receiver attempts to join
+    const res51 = await sessionStub.fetch(new Request('http://internal/join-broadcast-receiver', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        receiverId: 'mock_recv_51',
+        joinToken: 'token_51',
+      }),
+    }));
+
+    expect(res51.status).toBe(429);
+    const body51 = await res51.json();
+    expect(body51.success).toBe(false);
+    expect(body51.error).toContain('max 50');
   });
 });

@@ -29,6 +29,7 @@ export class ReceiverSink {
 
     this.fileHandle = null;
     this.writableStream = null;
+    this.writeQueue = Promise.resolve();
     this.chunks = []; // Blob fallback chunks
     this.isCompleted = false;
     this.isCancelled = false;
@@ -94,7 +95,12 @@ export class ReceiverSink {
       this.totalBytesReceived += payload.byteLength;
 
       if (this.writableStream) {
-        await this.writableStream.write(payload);
+        this.writeQueue = this.writeQueue.then(async () => {
+          if (this.isCancelled || !this.writableStream) return;
+          await this.writableStream.write(payload);
+        }).catch((err) => {
+          if (!this.isCancelled && this.onError) this.onError(err);
+        });
       } else {
         this.chunks.push(payload);
       }
@@ -102,8 +108,8 @@ export class ReceiverSink {
 
     this.reportProgress();
 
-    // Send periodic progress ACK back to sender every 1 MiB
-    if (this.totalBytesReceived - this.lastAckBytes >= 1024 * 1024) {
+    // Send periodic progress ACK back to sender every 512 KiB
+    if (this.totalBytesReceived - this.lastAckBytes >= 512 * 1024) {
       this.lastAckBytes = this.totalBytesReceived;
       if (this.controlChannel && this.controlChannel.readyState === 'open') {
         try {
@@ -143,6 +149,15 @@ export class ReceiverSink {
 
   async finishDownload() {
     this.isCompleted = true;
+
+    // Await all queued chunk writes before closing the stream
+    if (this.writeQueue) {
+      try {
+        await this.writeQueue;
+      } catch {
+        // write errors handled in queue
+      }
+    }
 
     let resultBlob = null;
 
@@ -199,6 +214,7 @@ export class ReceiverSink {
 
   cancel() {
     this.isCancelled = true;
+    this.writeQueue = Promise.resolve();
     if (this.writableStream) {
       try { this.writableStream.abort(); } catch { /* ignore */ }
       this.writableStream = null;

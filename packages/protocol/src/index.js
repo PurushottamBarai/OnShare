@@ -113,6 +113,18 @@ export const ErrorPayloadSchema = z.object({
 
 export const HeartbeatPayloadSchema = z.object({}).optional();
 
+export const SessionCreateBroadcastPayloadSchema = z.object({}).optional();
+export const SessionRegenerateBroadcastPayloadSchema = z.object({}).optional();
+export const SessionInvalidateBroadcastPayloadSchema = z.object({}).optional();
+export const SessionBroadcastCreatedPayloadSchema = z.object({
+  code: z.string().length(6),
+  sessionId: z.string().optional(),
+  expiresAt: z.number().optional(),
+});
+export const ReceiverJoinCodePayloadSchema = z.object({
+  code: z.string().length(6),
+});
+
 /**
  * Mapping of message types to payload schemas
  */
@@ -120,8 +132,13 @@ export const PAYLOAD_SCHEMAS = {
   'receiver.create': ReceiverCreatePayloadSchema,
   'receiver.created': ReceiverCreatedPayloadSchema,
   'receiver.regenerate': ReceiverRegeneratePayloadSchema,
+  'receiver.joinCode': ReceiverJoinCodePayloadSchema,
   'session.create': SessionCreatePayloadSchema,
   'session.created': SessionCreatedPayloadSchema,
+  'session.createBroadcast': SessionCreateBroadcastPayloadSchema,
+  'session.regenerateBroadcast': SessionRegenerateBroadcastPayloadSchema,
+  'session.invalidateBroadcast': SessionInvalidateBroadcastPayloadSchema,
+  'session.broadcastCreated': SessionBroadcastCreatedPayloadSchema,
   'session.addReceiver': SessionAddReceiverPayloadSchema,
   'session.receiverMatched': SessionReceiverMatchedPayloadSchema,
   'receiver.matched': ReceiverMatchedPayloadSchema,

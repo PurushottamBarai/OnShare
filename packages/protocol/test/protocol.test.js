@@ -83,4 +83,46 @@ describe('Shared Protocol Package', () => {
     expect(ERROR_CODES.RATE_LIMITED).toBe('RATE_LIMITED');
     expect(ERROR_CODES.SESSION_FULL).toBe('SESSION_FULL');
   });
+
+  it('validates broadcast mode message payloads', () => {
+    const createBroadcast = {
+      v: 1,
+      type: 'session.createBroadcast',
+      id: 'msg_bc1',
+      payload: {},
+    };
+    expect(parseAndValidateMessage(createBroadcast).type).toBe('session.createBroadcast');
+
+    const broadcastCreated = {
+      v: 1,
+      type: 'session.broadcastCreated',
+      id: 'msg_bc2',
+      payload: {
+        code: '654321',
+        sessionId: 'sess_123',
+        expiresAt: Date.now() + 60000,
+      },
+    };
+    expect(parseAndValidateMessage(broadcastCreated).payload.code).toBe('654321');
+
+    const receiverJoinCode = {
+      v: 1,
+      type: 'receiver.joinCode',
+      id: 'msg_bc3',
+      payload: {
+        code: '654321',
+      },
+    };
+    expect(parseAndValidateMessage(receiverJoinCode).payload.code).toBe('654321');
+
+    const invalidJoinCode = {
+      v: 1,
+      type: 'receiver.joinCode',
+      id: 'msg_bc4',
+      payload: {
+        code: '123', // must be 6 digits
+      },
+    };
+    expect(() => parseAndValidateMessage(invalidJoinCode)).toThrow();
+  });
 });

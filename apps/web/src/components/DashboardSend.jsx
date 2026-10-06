@@ -14,6 +14,9 @@ function formatBytes(bytes) {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
+export const MAX_SINGLE_FILE_BYTES = 35 * 1024 * 1024 * 1024; // 35 GB
+export const MAX_ZIP_TOTAL_BYTES = 4 * 1024 * 1024 * 1024;     // 4 GB
+
 export default function DashboardSend() {
   const { t } = useTranslation();
   const [files, setFiles] = useState([]);
@@ -23,9 +26,13 @@ export default function DashboardSend() {
   const [codeEntry, setCodeEntry] = useState('');
   const [receivers, setReceivers] = useState([]);
   const [codeError, setCodeError] = useState(null);
+  const [fileError, setFileError] = useState(null);
   const [lockoutSeconds, setLockoutSeconds] = useState(0);
   const [deviceLabel] = useState(() => generateDeviceLabel().fullLabel);
   const [isDragging, setIsDragging] = useState(false);
+  const [isBroadcast, setIsBroadcast] = useState(false);
+  const [broadcastCode, setBroadcastCode] = useState(null);
+  const [copiedCode, setCopiedCode] = useState(false);
 
   const signalingRef = useRef(null);
   const peerManagersRef = useRef(new Map());
@@ -45,6 +52,10 @@ export default function DashboardSend() {
     client.on('session.created', (payload) => {
       setSessionId(payload.sessionId);
       setSessionActive(true);
+    });
+
+    client.on('session.broadcastCreated', (payload) => {
+      setBroadcastCode(payload.code);
     });
 
     client.on('session.receiverMatched', (payload) => {
@@ -166,12 +177,49 @@ export default function DashboardSend() {
     };
   }, []);
 
+  const validateAndAddFiles = (newFiles) => {
+    if (!newFiles || newFiles.length === 0) return;
+    setFileError(null);
+
+    // 1. Check if any individual file exceeds 35GB
+    const oversizedFile = newFiles.find(f => (f.size || 0) > MAX_SINGLE_FILE_BYTES);
+    if (oversizedFile) {
+      setFileError(t('dashboard.fileCapacityExceeded', 'File capacity exceeded, Max Capacity 35GB'));
+      return;
+    }
+
+    const candidateFiles = [...files, ...newFiles];
+    const totalBytes = candidateFiles.reduce((acc, f) => acc + (f.size || 0), 0);
+
+    // 2. Check if total combined exceeds 35GB
+    if (totalBytes > MAX_SINGLE_FILE_BYTES) {
+      setFileError(t('dashboard.fileCapacityExceeded', 'File capacity exceeded, Max Capacity 35GB'));
+      return;
+    }
+
+    // 3. Check if multiple files exceed 4GB (ZIP format limit)
+    if (candidateFiles.length > 1 && totalBytes > MAX_ZIP_TOTAL_BYTES) {
+      setFileError(
+        t(
+          'dashboard.zipCapacityExceeded',
+          'Multiple files are zipped (Max 4GB). Please send files larger than 4GB individually (up to 35GB).'
+        )
+      );
+      return;
+    }
+
+    setFiles(candidateFiles);
+    if (isBroadcast && broadcastCode) {
+      signalingRef.current?.invalidateBroadcast();
+      setBroadcastCode(null);
+    }
+    ensureSession();
+  };
+
   const handleFileSelect = (event) => {
     const selected = Array.from(event.target.files || []);
-    if (selected.length > 0) {
-      setFiles(prev => [...prev, ...selected]);
-      ensureSession();
-    }
+    validateAndAddFiles(selected);
+    if (event.target) event.target.value = '';
   };
 
   const handleDragEnter = (e) => {
@@ -196,14 +244,40 @@ export default function DashboardSend() {
     event.preventDefault();
     setIsDragging(false);
     const dropped = Array.from(event.dataTransfer?.files || []);
-    if (dropped.length > 0) {
-      setFiles(prev => [...prev, ...dropped]);
-      ensureSession();
-    }
+    validateAndAddFiles(dropped);
   };
 
   const removeFile = (index) => {
+    setFileError(null);
     setFiles(prev => prev.filter((_, i) => i !== index));
+    if (isBroadcast && broadcastCode) {
+      signalingRef.current?.invalidateBroadcast();
+      setBroadcastCode(null);
+    }
+  };
+
+  const removeReceiver = (receiverId) => {
+    const pipeline = senderPipelinesRef.current.get(receiverId);
+    if (pipeline) {
+      try {
+        pipeline.cancel();
+      } catch {
+        // ignore
+      }
+      senderPipelinesRef.current.delete(receiverId);
+    }
+
+    const pm = peerManagersRef.current.get(receiverId);
+    if (pm) {
+      try {
+        pm.close();
+      } catch {
+        // ignore
+      }
+      peerManagersRef.current.delete(receiverId);
+    }
+
+    setReceivers(prev => prev.filter(r => r.id !== receiverId));
   };
 
   const handleAddReceiver = (e) => {
@@ -212,6 +286,21 @@ export default function DashboardSend() {
     setCodeError(null);
     ensureSession();
     signalingRef.current?.addReceiver(codeEntry);
+  };
+
+  const handleStartBroadcast = () => {
+    if (files.length === 0) {
+      setFileError(t('dashboard.selectFilesFirst', 'Please select at least one file to send'));
+      return;
+    }
+    setFileError(null);
+    ensureSession();
+    signalingRef.current?.createBroadcastCode();
+  };
+
+  const handleRegenerateBroadcast = () => {
+    ensureSession();
+    signalingRef.current?.regenerateBroadcast();
   };
 
   const totalFileSize = files.reduce((acc, f) => acc + f.size, 0);
@@ -236,8 +325,53 @@ export default function DashboardSend() {
           </svg>
           <span>{t('nav.send')}</span>
         </div>
-        <span className="text-xs text-text-secondary font-medium">Max 10GB</span>
+
+        {/* Broadcast Mode Toggle positioned between Send and Max 35GB */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-text-secondary select-none">
+            {t('dashboard.broadcastMode', 'Broadcast Mode')}
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={isBroadcast}
+            onClick={() => {
+              setIsBroadcast(prev => !prev);
+              setBroadcastCode(null);
+            }}
+            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 ease-in-out focus:outline-none ${
+              isBroadcast ? 'bg-accent-primary border-accent-primary' : 'bg-bg-elevated border-border-subtle'
+            }`}
+          >
+            <span
+              aria-hidden="true"
+              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-bg-base shadow-sm ring-0 transition duration-200 ease-in-out ${
+                isBroadcast ? 'translate-x-4' : 'translate-x-0'
+              }`}
+            />
+          </button>
+        </div>
+
+        <span className="text-xs text-text-secondary font-medium">Max 35GB</span>
       </div>
+
+      {fileError && (
+        <div className="flex items-center justify-between p-3 bg-status-error/10 border border-status-error/30 rounded-xl text-status-error text-xs relative z-20">
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span>{fileError}</span>
+          </div>
+          <button 
+            type="button" 
+            onClick={() => setFileError(null)}
+            className="text-text-secondary hover:text-text-primary ml-2 font-bold text-sm leading-none cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       <div
         onClick={() => fileInputRef.current?.click()}
@@ -323,9 +457,19 @@ export default function DashboardSend() {
                       <span className="w-2 h-2 rounded-full bg-text-primary"></span>
                       <span className="font-semibold">{r.label}</span>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <span className="font-mono">{r.progress}%</span>
-                      <svg className="w-3 h-3 text-status-error cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                      <button
+                        type="button"
+                        onClick={() => removeReceiver(r.id)}
+                        className="p-1 -mr-1 rounded hover:bg-bg-elevated text-status-error/80 hover:text-status-error transition-colors cursor-pointer"
+                        title="Remove receiver"
+                        aria-label="Remove receiver"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
                     </div>
                   </div>
                   {r.status === 'sending' && (
@@ -340,31 +484,92 @@ export default function DashboardSend() {
         </div>
       )}
 
-      {/* Receiver Code Input - Always Visible */}
-      <form onSubmit={handleAddReceiver} className="flex flex-col w-full mt-auto">
-        <div className="flex w-full">
-          <input
-            type="text"
-            maxLength={6}
-            value={codeEntry}
-            onChange={(e) => setCodeEntry(e.target.value.replace(/\D/g, ''))}
-            placeholder={t('dashboard.receiverCode')}
-            disabled={lockoutSeconds > 0}
-            className="flex-1 px-4 py-2.5 rounded-l bg-bg-elevated border border-r-0 border-border-subtle focus:border-accent-primary text-text-primary font-mono text-sm tracking-widest placeholder:tracking-normal placeholder:font-sans focus:outline-none"
-          />
-          <button
-            type="submit"
-            disabled={codeEntry.length !== 6 || lockoutSeconds > 0}
-            className="px-4 py-2.5 rounded-r border border-l-0 border-accent-primary bg-accent-primary hover:bg-accent-hover disabled:opacity-50 text-bg-base flex items-center justify-center transition-colors cursor-pointer"
-          >
-            <svg className="w-4 h-4 transform rotate-90 -ml-0.5 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-            </svg>
-          </button>
-        </div>
-        {codeError && <p className="text-xs text-status-error mt-2">{codeError}</p>}
-        {lockoutSeconds > 0 && <LockoutBanner remainingSeconds={lockoutSeconds} message="Too many attempts." />}
-      </form>
+      {/* Receiver Code Input / Broadcast Action Section */}
+      <div className="mt-auto flex flex-col w-full">
+        {/* If broadcast is toggled ON */}
+        {isBroadcast ? (
+          broadcastCode ? (
+            <div className="flex items-center justify-between p-3 rounded-lg bg-bg-elevated border border-border-subtle">
+              <span className="text-xl font-mono font-bold tracking-widest text-accent-primary select-all">
+                {broadcastCode}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleRegenerateBroadcast}
+                  className="px-3 py-1.5 rounded text-xs font-medium bg-bg-surface hover:bg-bg-elevated border border-border-subtle hover:border-accent-primary text-text-primary flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span>Regenerate</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(broadcastCode);
+                    setCopiedCode(true);
+                    setTimeout(() => setCopiedCode(false), 2000);
+                  }}
+                  className="px-3 py-1.5 rounded bg-accent-primary hover:bg-accent-hover text-bg-base font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  {copiedCode ? (
+                    <>
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      <span>Copy</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleStartBroadcast}
+              className="w-full py-2.5 px-4 rounded bg-accent-primary hover:bg-accent-hover text-bg-base font-semibold text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-sm"
+            >
+              <span>Send</span>
+              <svg className="w-4 h-4 transform rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
+            </button>
+          )
+        ) : (
+          <form onSubmit={handleAddReceiver} className="flex flex-col w-full">
+            <div className="flex w-full">
+              <input
+                type="text"
+                maxLength={6}
+                value={codeEntry}
+                onChange={(e) => setCodeEntry(e.target.value.replace(/\D/g, ''))}
+                placeholder={t('dashboard.receiverCode')}
+                disabled={lockoutSeconds > 0}
+                className="flex-1 px-4 py-2.5 rounded-l bg-bg-elevated border border-r-0 border-border-subtle focus:border-accent-primary text-text-primary font-mono text-sm tracking-widest placeholder:tracking-normal placeholder:font-sans focus:outline-none"
+              />
+              <button
+                type="submit"
+                disabled={codeEntry.length !== 6 || lockoutSeconds > 0}
+                className="px-4 py-2.5 rounded-r border border-l-0 border-accent-primary bg-accent-primary hover:bg-accent-hover disabled:opacity-50 text-bg-base flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <svg className="w-4 h-4 transform rotate-90 -ml-0.5 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+              </button>
+            </div>
+            {codeError && <p className="text-xs text-status-error mt-2">{codeError}</p>}
+            {lockoutSeconds > 0 && <LockoutBanner remainingSeconds={lockoutSeconds} message="Too many attempts." />}
+          </form>
+        )}
+      </div>
     </div>
   );
 }
