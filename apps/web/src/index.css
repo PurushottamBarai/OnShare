@@ -112,3 +112,57 @@ button, a, input, select, textarea {
 button {
   white-space: nowrap;
 }
+
+/* ==========================================================================
+   Circular Reveal Theme View Transition (40px feathered radial-gradient)
+   ========================================================================== */
+@property --mask-radius {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 0px;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 9999;
+}
+
+@keyframes circular-mask-reveal {
+  from {
+    --mask-radius: 0px;
+  }
+  to {
+    --mask-radius: var(--theme-r, 2000px);
+  }
+}
+
+.theme-transitioning::view-transition-new(root) {
+  mask-image: radial-gradient(
+    circle at var(--theme-x, 50%) var(--theme-y, 50%),
+    black calc(var(--mask-radius, 0px) - 40px),
+    transparent var(--mask-radius, 0px)
+  );
+  -webkit-mask-image: radial-gradient(
+    circle at var(--theme-x, 50%) var(--theme-y, 50%),
+    black calc(var(--mask-radius, 0px) - 40px),
+    transparent var(--mask-radius, 0px)
+  );
+  animation: circular-mask-reveal 450ms ease-in forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(root),
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+}

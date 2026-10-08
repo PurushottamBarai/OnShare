@@ -1,4 +1,5 @@
-import React, { Suspense, lazy, useState, useEffect } from "react";
+import React, { Suspense, lazy, useState, useEffect, useRef } from "react";
+import { flushSync } from "react-dom";
 import { Routes, Route, Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import ConsentBanner from "./components/ConsentBanner.jsx";
@@ -38,6 +39,7 @@ const LANGUAGES = [
 ];
 
 const Home = lazy(() => import("./routes/Home.jsx"));
+const About = lazy(() => import("./routes/About.jsx"));
 const HowItWorks = lazy(() => import("./routes/HowItWorks.jsx"));
 const Privacy = lazy(() => import("./routes/Privacy.jsx"));
 const Terms = lazy(() => import("./routes/Terms.jsx"));
@@ -135,8 +137,92 @@ export default function App() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, []);
 
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  const isTransitioningRef = useRef(false);
+
+  const toggleTheme = async (event) => {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // Fallback if View Transitions API is unsupported or user prefers reduced motion
+    if (typeof document === "undefined" || !document.startViewTransition || prefersReducedMotion) {
+      setTheme(nextTheme);
+      return;
+    }
+
+    // Prevent broken state from rapid clicks
+    if (isTransitioningRef.current) {
+      setTheme(nextTheme);
+      return;
+    }
+
+    // Determine toggle button center coordinates
+    let x = window.innerWidth / 2;
+    let y = window.innerHeight / 2;
+
+    if (event?.currentTarget) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      x = rect.left + rect.width / 2;
+      y = rect.top + rect.height / 2;
+    } else if (event?.clientX !== undefined && event?.clientY !== undefined) {
+      x = event.clientX;
+      y = event.clientY;
+    }
+
+    // Calculate maximum radius to the farthest viewport corner
+    const endRadius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    );
+
+    document.documentElement.style.setProperty("--theme-x", `${x}px`);
+    document.documentElement.style.setProperty("--theme-y", `${y}px`);
+    document.documentElement.style.setProperty("--theme-r", `${endRadius + 40}px`);
+    document.documentElement.classList.add("theme-transitioning");
+
+    isTransitioningRef.current = true;
+
+    try {
+      const transition = document.startViewTransition(() => {
+        flushSync(() => {
+          setTheme(nextTheme);
+        });
+      });
+
+      // Detect if CSS @property is supported for radial-gradient mask animation;
+      // if not, fall back to animated clip-path: circle()
+      const supportsCSSProperty =
+        typeof window !== "undefined" &&
+        window.CSS &&
+        typeof CSS.registerProperty === "function";
+
+      if (!supportsCSSProperty) {
+        await transition.ready;
+        const anim = document.documentElement.animate(
+          {
+            clipPath: [
+              `circle(0px at ${x}px ${y}px)`,
+              `circle(${endRadius}px at ${x}px ${y}px)`,
+            ],
+          },
+          {
+            duration: 450,
+            easing: "ease-in",
+            pseudoElement: "::view-transition-new(root)",
+          }
+        );
+        await anim.finished;
+      }
+
+      await transition.finished;
+    } catch {
+      // Graceful fallback if transition is interrupted
+    } finally {
+      document.documentElement.classList.remove("theme-transitioning");
+      isTransitioningRef.current = false;
+    }
   };
 
   const isDashboardRoute = ["/", "/send", "/receive", "/text"].includes(location.pathname);
@@ -176,6 +262,12 @@ export default function App() {
               className={`transition-colors ${location.pathname === "/text" ? "text-accent-primary font-semibold" : "text-text-secondary hover:text-text-primary"}`}
             >
               {t("nav.textLive")}
+            </Link>
+            <Link
+              to="/about"
+              className={`transition-colors ${location.pathname === "/about" ? "text-accent-primary font-semibold" : "text-text-secondary hover:text-text-primary"}`}
+            >
+              {t("nav.about", "About")}
             </Link>
             <Link
               to="/contact"
@@ -328,6 +420,8 @@ export default function App() {
         {!isDashboardRoute && (
           <Suspense fallback={<LoadingFallback />}>
             <Routes>
+              <Route path="/about" element={<About />} />
+              <Route path="/about-us" element={<About />} />
               <Route path="/how-it-works" element={<HowItWorks />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
@@ -348,6 +442,9 @@ export default function App() {
             <span className="block sm:inline mt-0.5 sm:mt-0">{t("footer.tagline")}</span>
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4 text-xs">
+            <Link to="/about" className="hover:text-text-primary">
+              {t("footer.about", "About Us")}
+            </Link>
             <Link to="/how-it-works" className="hover:text-text-primary">
               {t("footer.howItWorks")}
             </Link>

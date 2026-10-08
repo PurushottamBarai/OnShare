@@ -11,6 +11,7 @@ describe('App Route Shells', () => {
     { path: '/receive' },
     { path: '/text' },
     { path: '/how-it-works' },
+    { path: '/about' },
     { path: '/privacy' },
     { path: '/terms' },
     { path: '/contact' },

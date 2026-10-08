@@ -171,6 +171,16 @@ const ROUTE_SEO = {
     description: 'Collaboratively type, paste, and edit plain text in real-time between browsers without login or storage. Powered by Yjs CRDTs.',
     canonical: 'https://onshare.me/text'
   },
+  '/about': {
+    title: 'About Us – Direct P2P Browser Sharing | OnShare',
+    description: 'Learn about OnShare, our mission to make browser-to-browser sharing fast, direct, and private with zero cloud storage.',
+    canonical: 'https://onshare.me/about'
+  },
+  '/about-us': {
+    title: 'About Us – Direct P2P Browser Sharing | OnShare',
+    description: 'Learn about OnShare, our mission to make browser-to-browser sharing fast, direct, and private with zero cloud storage.',
+    canonical: 'https://onshare.me/about'
+  },
   '/how-it-works': {
     title: 'How It Works – Private P2P WebRTC Transfer | OnShare',
     description: 'Discover how OnShare enables direct browser-to-browser file transfers and live text synchronization with zero content saved on servers.',

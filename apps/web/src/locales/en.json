@@ -3,10 +3,12 @@
     "send": "Send",
     "receive": "Receive",
     "textLive": "Text Live",
+    "about": "About",
     "contact": "Contact"
   },
   "footer": {
     "tagline": "Share files and text instantly and securely without sign-up",
+    "about": "About Us",
     "howItWorks": "How It Works",
     "privacyPolicy": "Privacy Policy",
     "termsOfUse": "Terms of Use",
@@ -92,6 +94,24 @@
     "arch2Desc": "When multiple files are shared, OnShare packages them on the fly into an uncompressed ZIP archive using streaming chunk reads. The sender's browser never buffers multi-gigabyte archives into RAM, keeping memory flat and constant.",
     "arch3Title": "Conflict-Free Live Text (Yjs CRDTs)",
     "arch3Desc": "In Share Text mode, participants edit a shared plain-text document in real time. Changes are merged deterministically using Conflict-free Replicated Data Types (CRDTs) over WebRTC text data channels without central coordination."
+  },
+  "aboutPage": {
+    "title": "About OnShare",
+    "subtitle": "Fast, private, browser-to-browser sharing built for transparency and simplicity.",
+    "missionTitle": "Our Mission",
+    "missionDesc": "OnShare was created to eliminate the unnecessary friction and privacy risks of modern file transfer services. Why should your personal files, slides, or photos sit on a company’s cloud servers just to share them with a friend or colleague sitting in the same room? We believe file transfer should be as direct, lightweight, and private as handing someone a physical flash drive.",
+    "principle1Title": "Zero Cloud Storage",
+    "principle1Desc": "Your files never touch our hard drives or databases. Data streams directly between peer browsers over encrypted WebRTC data channels with DTLS security.",
+    "principle2Title": "No Accounts or Passwords",
+    "principle2Desc": "No sign-up forms, no email verifications, and no tracking cookies. Pair instantly using short-lived 6-digit one-time access codes that expire automatically.",
+    "principle3Title": "High Capacity (Up to 40 GB)",
+    "principle3Desc": "Transfer single files up to 40 GB directly to disk using the Chromium File System Access API without exhausting browser memory.",
+    "principle4Title": "1-to-1 and Broadcast Sharing",
+    "principle4Desc": "Pair with a single receiver using reverse verification, or toggle Broadcast Mode to share files with up to 50 concurrent recipients with one code.",
+    "techTitle": "Built on Open Web Standards",
+    "techDesc": "OnShare is powered entirely by modern web standards: WebRTC DataChannels for peer-to-peer transport, Yjs CRDTs for collaborative real-time text synchronization, and ephemeral WebSockets for lightweight discovery signaling. We believe in building sustainable web tools funded ethically by non-intrusive display advertising.",
+    "contactHeading": "Have questions or suggestions?",
+    "contactSubheading": "We would love to hear from you. Reach out to our team at any time."
   },
   "contactPage": {
     "title": "Contact",
