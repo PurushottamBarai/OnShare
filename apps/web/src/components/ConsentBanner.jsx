@@ -33,7 +33,7 @@ export default function ConsentBanner() {
       role="dialog"
       aria-label="Privacy and Advertising Consent"
     >
-      <div className="max-w-content mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="w-full px-2 sm:px-6 md:px-14 lg:px-24 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="text-xs text-text-secondary leading-relaxed">
           <p className="font-semibold text-text-primary text-sm mb-0.5">
             {t('consent.title')}

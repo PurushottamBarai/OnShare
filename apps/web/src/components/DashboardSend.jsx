@@ -5,6 +5,7 @@ import { generateDeviceLabel } from '../utils/deviceLabel.js';
 import { SenderPipeline, generateZipFilename } from '../transfer/senderPipeline.js';
 import LockoutBanner from './LockoutBanner.jsx';
 import { useTranslation } from 'react-i18next';
+import { setTransferStatus } from '../utils/transferState.js';
 
 function formatBytes(bytes) {
   if (!bytes || bytes === 0) return '0 B';
@@ -97,13 +98,29 @@ export default function DashboardSend() {
                 controlChannel: pm.controlChannel,
                 files: currentFiles,
                 onProgress: (p) => {
-                  setReceivers(curr => curr.map(item => item.id === receiverId ? { ...item, status: 'sending', progress: p.percent } : item));
+                  setReceivers(curr => curr.map(item => item.id === receiverId ? {
+                    ...item,
+                    status: 'sending',
+                    progress: p.percent,
+                    speedBps: p.speedBps || 0,
+                    bytesSent: p.bytesSent || 0,
+                    totalSize: p.totalSize || item.totalSize || 0,
+                  } : item));
+                  setTransferStatus({ isActive: true, role: 'sender', progress: p.percent });
                 },
                 onComplete: () => {
-                  setReceivers(curr => curr.map(item => item.id === receiverId ? { ...item, status: 'done', progress: 100 } : item));
+                  setReceivers(curr => curr.map(item => item.id === receiverId ? {
+                    ...item,
+                    status: 'done',
+                    progress: 100,
+                    speedBps: 0,
+                    bytesSent: item.totalSize || 0,
+                  } : item));
+                  setTransferStatus({ isActive: false, role: 'sender', progress: 100 });
                 },
                 onError: () => {
                   setReceivers(curr => curr.map(item => item.id === receiverId ? { ...item, status: 'failed' } : item));
+                  setTransferStatus({ isActive: false, role: 'sender' });
                 },
               });
               senderPipelinesRef.current.set(receiverId, pipeline);
@@ -473,8 +490,25 @@ export default function DashboardSend() {
                     </div>
                   </div>
                   {r.status === 'sending' && (
-                    <div className="w-full h-1 bg-bg-elevated rounded-full overflow-hidden">
-                      <div className="h-full bg-accent-primary" style={{ width: `${r.progress}%` }}></div>
+                    <div className="space-y-1.5 mt-1">
+                      <div className="w-full h-1.5 bg-bg-elevated rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-accent-primary transition-all duration-150"
+                          style={{ width: `${r.progress}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-xs text-text-secondary">
+                        <span>{formatBytes(r.speedBps)}/s</span>
+                        <span>
+                          {formatBytes(r.bytesSent)} / {formatBytes(r.totalSize)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  {r.status === 'done' && (
+                    <div className="flex justify-between text-xs text-status-success font-medium mt-0.5">
+                      <span>Completed</span>
+                      <span>{formatBytes(r.totalSize || r.bytesSent)}</span>
                     </div>
                   )}
                 </div>

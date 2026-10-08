@@ -3,6 +3,7 @@ import { SignalingClient } from '../signaling/SignalingClient.js';
 import { PeerManager } from '../webrtc/PeerManager.js';
 import { ReceiverSink } from '../transfer/receiverSink.js';
 import { useTranslation } from 'react-i18next';
+import { setTransferStatus } from '../utils/transferState.js';
 
 function formatBytes(bytes) {
   if (!bytes || bytes === 0) return '0 B';
@@ -102,7 +103,7 @@ export default function DashboardReceive({ onTextSessionActive }) {
           if (state === 'DECLINED') setReceiverState('DECLINED');
           if (state === 'FAILED') {
             setReceiverState('FAILED');
-            setErrorMessage('Peer connection failed.');
+            setErrorMessage('Server connection is experiencing temporary load. Please try again after some time. Aapki asuvidha ke liye humein khed hai!');
           }
         },
       });
@@ -223,9 +224,13 @@ export default function DashboardReceive({ onTextSessionActive }) {
         manifest,
         controlChannel: pm.controlChannel,
         dataChannel: pm.dataChannel,
-        onProgress: (p) => setTransferProgress(p),
+        onProgress: (p) => {
+          setTransferProgress(p);
+          setTransferStatus({ isActive: true, role: 'receiver', progress: p.percent });
+        },
         onComplete: () => {
           setReceiverState('DONE');
+          setTransferStatus({ isActive: false, role: 'receiver', progress: 100 });
           try {
             if (typeof window !== 'undefined' && window.sessionStorage) {
               sessionStorage.removeItem('onshare_receiver_code');
@@ -238,6 +243,7 @@ export default function DashboardReceive({ onTextSessionActive }) {
         },
         onError: (err) => {
           setReceiverState('FAILED');
+          setTransferStatus({ isActive: false, role: 'receiver' });
           setErrorMessage(err.message || 'File transfer failed');
         },
       });
@@ -423,17 +429,17 @@ export default function DashboardReceive({ onTextSessionActive }) {
         )}
 
         {(receiverState === 'FAILED' || receiverState === 'EXPIRED' || receiverState === 'DECLINED') && (
-          <div className="w-full p-4 rounded-lg bg-status-error/10 border border-status-error shadow-sm flex items-center justify-between">
-             <div className="flex items-center gap-2 text-status-error">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+          <div className="w-full p-4 rounded-lg bg-status-error/10 border border-status-error shadow-sm flex items-start justify-between gap-3">
+             <div className="flex items-start gap-2.5 text-status-error flex-1 min-w-0">
+                <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                 <div className="flex flex-col">
-                  <span className="text-sm font-medium">{receiverState === 'DECLINED' ? 'Declined' : 'Failed'}</span>
+                  <span className="text-sm font-semibold">{receiverState === 'DECLINED' ? 'Declined' : 'Connection Notice'}</span>
                   {errorMessage && receiverState === 'FAILED' && (
-                    <span className="text-xs opacity-80 mt-0.5">{errorMessage}</span>
+                    <span className="text-xs opacity-90 mt-1 leading-relaxed text-text-primary/90">{errorMessage}</span>
                   )}
                 </div>
              </div>
-             <button onClick={initReceiver} className="text-xs px-3 py-1 rounded bg-bg-surface border border-border-subtle hover:border-accent-primary transition-colors cursor-pointer text-text-primary">
+             <button onClick={initReceiver} className="text-xs px-3 py-1.5 rounded bg-bg-surface border border-border-subtle hover:border-accent-primary transition-colors cursor-pointer text-text-primary flex-shrink-0 self-center">
               Retry
             </button>
           </div>

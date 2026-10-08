@@ -4,6 +4,7 @@ import { PeerManager } from '../webrtc/PeerManager.js';
 import { TextSession, MAX_TEXT_CHARACTERS } from '../text/TextSession.js';
 import { generateDeviceLabel } from '../utils/deviceLabel.js';
 import { useTranslation } from 'react-i18next';
+import { setTransferStatus } from '../utils/transferState.js';
 
 const DashboardText = forwardRef((props, ref) => {
   const { t } = useTranslation();
@@ -43,6 +44,7 @@ const DashboardText = forwardRef((props, ref) => {
       textSessionRef.current = session;
       session.addPeer('sender', pm.textChannel, pm.controlChannel);
       setMode('receiver');
+      setTransferStatus({ isActive: true, role: 'text', details: 'Live Text' });
     }
   }));
 
@@ -106,6 +108,7 @@ const DashboardText = forwardRef((props, ref) => {
         onChannelsReady: ({ textChannel, controlChannel }) => {
           if (textSessionRef.current) {
             textSessionRef.current.addPeer(receiverId, textChannel, controlChannel);
+            setTransferStatus({ isActive: true, role: 'text', details: 'Live Text' });
           }
         },
       });
@@ -121,7 +124,13 @@ const DashboardText = forwardRef((props, ref) => {
 
     client.on('peer.left', (payload) => {
       if (textSessionRef.current) textSessionRef.current.removePeer(payload.peerId);
-      setReceivers(prev => prev.filter(r => r.id !== payload.peerId));
+      setReceivers(prev => {
+        const updated = prev.filter(r => r.id !== payload.peerId);
+        if (updated.length === 0) {
+          setTransferStatus({ isActive: false });
+        }
+        return updated;
+      });
     });
 
     client.on('error', (payload) => {

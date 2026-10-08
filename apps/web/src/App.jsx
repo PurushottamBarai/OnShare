@@ -46,6 +46,8 @@ const Feedback = lazy(() => import("./routes/Feedback.jsx"));
 const ComponentsShowcase = lazy(
   () => import("./routes/ComponentsShowcase.jsx"),
 );
+import ActiveTransferBar from "./components/ActiveTransferBar.jsx";
+import { getTransferStatus } from "./utils/transferState.js";
 
 function LoadingFallback() {
   return (
@@ -123,9 +125,23 @@ export default function App() {
     localStorage.setItem("onshare-theme", theme);
   }, [theme]);
 
+  // Protect ongoing P2P transfers from accidental tab closure
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (getTransferStatus().isActive) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
+
   const toggleTheme = () => {
     setTheme((prev) => (prev === "dark" ? "light" : "dark"));
   };
+
+  const isDashboardRoute = ["/", "/send", "/receive", "/text"].includes(location.pathname);
 
   return (
     <div className="min-h-screen flex flex-col bg-bg-base text-text-primary transition-colors duration-150">
@@ -306,26 +322,35 @@ export default function App() {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 w-full mx-auto">
-        <Suspense fallback={<LoadingFallback />}>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/send" element={<Home />} />
-            <Route path="/receive" element={<Home />} />
-            <Route path="/text" element={<Home />} />
-            <Route path="/how-it-works" element={<HowItWorks />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/feedback" element={<Feedback />} />
-            <Route path="/components" element={<ComponentsShowcase />} />
-          </Routes>
-        </Suspense>
+      <main className="flex-1 w-full mx-auto relative">
+        {/* Core Transfer Engine: Kept mounted across navigation so P2P data channels are preserved */}
+        <div className={isDashboardRoute ? "block w-full" : "hidden"}>
+          <Suspense fallback={<LoadingFallback />}>
+            <Home />
+          </Suspense>
+        </div>
+
+        {/* Auxiliary Routes rendered dynamically without unmounting the transfer engine */}
+        {!isDashboardRoute && (
+          <Suspense fallback={<LoadingFallback />}>
+            <Routes>
+              <Route path="/how-it-works" element={<HowItWorks />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/feedback" element={<Feedback />} />
+              <Route path="/components" element={<ComponentsShowcase />} />
+              <Route path="*" element={<Home />} />
+            </Routes>
+          </Suspense>
+        )}
+
+        <ActiveTransferBar />
       </main>
 
       {/* Footer per AD-4 */}
-      <footer className="border-t border-border-subtle bg-bg-surface px-6 py-6 text-helper text-text-secondary mt-auto">
-        <div className="max-w-content mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <footer className="border-t border-border-subtle bg-bg-surface px-4 sm:px-8 md:px-16 lg:px-28 py-6 text-helper text-text-secondary mt-auto">
+        <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-center sm:text-left">
             <span className="font-semibold text-text-primary">OnShare</span>
             <span className="hidden sm:inline"> • </span>

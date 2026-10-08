@@ -26,9 +26,9 @@ export default function Home() {
   };
 
   return (
-    <div data-testid="route-dashboard" className="w-full p-4 sm:p-8 lg:p-10 flex flex-col lg:flex-row items-start justify-start lg:gap-10 xl:gap-16 min-h-[calc(100vh-120px)]">
+    <div data-testid="route-dashboard" className="w-full p-4 sm:p-8 lg:p-10 flex flex-col lg:flex-row items-center lg:items-start justify-center lg:gap-10 xl:gap-16 min-h-[calc(100vh-120px)] max-w-7xl mx-auto">
       {/* Primary Dashboard Card (Send / Receive / Text) - strictly unhindered */}
-      <div className="w-full max-w-[480px] sm:ml-8 lg:ml-12 xl:ml-20 flex flex-col gap-4 shrink-0">
+      <div className="w-full max-w-[480px] flex flex-col gap-4 shrink-0">
         
         <div className="flex bg-bg-surface/60 backdrop-blur-0 rounded-xl border border-gray-100 dark:border-border-subtle/30 shadow-[0_8px_32px_rgba(0,0,0,0.08)] overflow-hidden font-medium text-sm w-fit self-center">
           <Link 

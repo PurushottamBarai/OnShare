@@ -14,8 +14,8 @@ export async function generateIceServers(userId, env = {}) {
   const servers = [{ urls: stunServers }];
 
   // Dedicated Primary TURN: ExpressTURN (1,000 GB / 1 TB per month free allowance)
-  const expressUsername = env.EXPRESSTURN_USERNAME || '000000002105784935';
-  const expressPassword = env.EXPRESSTURN_PASSWORD || 'l1gke0mH+khzFzfYN/akGrr3pD8=';
+  const expressUsername = env.EXPRESSTURN_USERNAME || '000000002106795385';
+  const expressPassword = env.EXPRESSTURN_PASSWORD || 'h8ZrRiQwanlyUDEqIT+rsCqbSLQ=';
 
   if (expressUsername && expressPassword) {
     servers.push({

@@ -29,4 +29,16 @@ describe('App Route Shells', () => {
       expect(el).toBeDefined();
     });
   });
+
+  it('preserves dashboard mounted in DOM when visiting secondary routes like /contact', async () => {
+    render(
+      <MemoryRouter initialEntries={['/contact']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    const dashboard = await screen.findByTestId('route-dashboard');
+    expect(dashboard).toBeDefined();
+    expect(dashboard.closest('div.hidden')).not.toBeNull();
+  });
 });
