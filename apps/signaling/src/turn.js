@@ -9,23 +9,15 @@ export async function generateIceServers(userId, env = {}) {
     'stun:stun1.l.google.com:19302',
     'stun:stun2.l.google.com:19302',
     'stun:stun.cloudflare.com:3478',
-    'stun:stun.relay.metered.ca:80',
   ];
 
   const servers = [{ urls: stunServers }];
 
-  const expressUsername = env.EXPRESSTURN_USERNAME;
-  const expressPassword = env.EXPRESSTURN_PASSWORD;
-
-  const meteredDomain = env.METERED_TURN_DOMAIN;
-  const meteredUsername = env.METERED_TURN_USERNAME;
-  const meteredPassword = env.METERED_TURN_PASSWORD;
-
-  const turnSecret = env.TURN_SECRET;
-  const turnDomain = env.TURN_DOMAIN;
+  // Dedicated Primary TURN: ExpressTURN (1,000 GB / 1 TB per month free allowance)
+  const expressUsername = env.EXPRESSTURN_USERNAME || '000000002105784935';
+  const expressPassword = env.EXPRESSTURN_PASSWORD || 'l1gke0mH+khzFzfYN/akGrr3pD8=';
 
   if (expressUsername && expressPassword) {
-    // ExpressTURN free tier (1TB/month, static credentials)
     servers.push({
       urls: [
         'turn:free.expressturn.com:3478?transport=udp',
@@ -36,8 +28,13 @@ export async function generateIceServers(userId, env = {}) {
     });
   }
 
-  if (meteredDomain && meteredUsername && meteredPassword) {
-    // Metered.ca free TURN account (static dashboard credential)
+  // Metered.ca fallback (Only attached if explicitly enabled and non-exhausted)
+  const enableMetered = env.ENABLE_METERED === 'true';
+  const meteredDomain = env.METERED_TURN_DOMAIN;
+  const meteredUsername = env.METERED_TURN_USERNAME;
+  const meteredPassword = env.METERED_TURN_PASSWORD;
+
+  if (enableMetered && meteredDomain && meteredUsername && meteredPassword) {
     servers.push({
       urls: [
         `turn:${meteredDomain}:80`,
@@ -48,16 +45,15 @@ export async function generateIceServers(userId, env = {}) {
       username: meteredUsername,
       credential: meteredPassword,
     });
-  } else if (turnDomain && turnSecret && turnDomain !== 'turn.onshare.net') {
-    // 1-hour expiration per TRD section 6
+  } else if (env.TURN_DOMAIN && env.TURN_SECRET && env.TURN_DOMAIN !== 'turn.onshare.net') {
+    // Custom HMAC-SHA1 TURN provider (if configured)
     const expiry = Math.floor(Date.now() / 1000) + 3600;
     const username = `${expiry}:${userId}`;
 
-    // HMAC-SHA1 signature
     const encoder = new TextEncoder();
     const key = await crypto.subtle.importKey(
       'raw',
-      encoder.encode(turnSecret),
+      encoder.encode(env.TURN_SECRET),
       { name: 'HMAC', hash: 'SHA-1' },
       false,
       ['sign']
@@ -68,9 +64,9 @@ export async function generateIceServers(userId, env = {}) {
 
     servers.push({
       urls: [
-        `turn:${turnDomain}:3478?transport=udp`,
-        `turn:${turnDomain}:3478?transport=tcp`,
-        `turns:${turnDomain}:443?transport=tcp`
+        `turn:${env.TURN_DOMAIN}:3478?transport=udp`,
+        `turn:${env.TURN_DOMAIN}:3478?transport=tcp`,
+        `turns:${env.TURN_DOMAIN}:443?transport=tcp`
       ],
       username,
       credential,
