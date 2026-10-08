@@ -291,6 +291,59 @@ export function createServer(port = 8787) {
       return;
     }
 
+    // 4. Feedback Email Service with Resend (onshare.me domain)
+    if (url.pathname === '/api/feedback' && req.method === 'POST') {
+      let body = '';
+      req.on('data', chunk => { body += chunk; });
+      req.on('end', () => {
+        try {
+          const { name, message, email } = JSON.parse(body || '{}');
+          const resendKey = process.env.RESEND_API_KEY;
+          if (resendKey) {
+            const payload = JSON.stringify({
+              from: 'OnShare <feedback@onshare.me>',
+              to: [process.env.FEEDBACK_RECEIVER_EMAIL || 'purushottamx.in@gmail.com'],
+              reply_to: email || undefined,
+              subject: `[OnShare Feedback] from ${name || 'User'}`,
+              text: `Sender Name: ${name || 'Anonymous'}\nSender Email: ${email || 'Not provided'}\n\nMessage:\n${message || ''}`,
+            });
+
+            const resendReq = https.request('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${resendKey}`,
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(payload),
+              },
+            }, (resendRes) => {
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ success: true, status: resendRes.statusCode }));
+            });
+
+            resendReq.on('error', () => {
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ success: true, delivered: false }));
+            });
+
+            resendReq.write(payload);
+            resendReq.end();
+            return;
+          }
+
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ success: true }));
+        } catch {
+          res.statusCode = 400;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        }
+      });
+      return;
+    }
+
     const headers = new Headers();
     for (const [key, value] of Object.entries(req.headers)) {
       if (value) {

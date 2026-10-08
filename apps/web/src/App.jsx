@@ -46,7 +46,6 @@ const Feedback = lazy(() => import("./routes/Feedback.jsx"));
 const ComponentsShowcase = lazy(
   () => import("./routes/ComponentsShowcase.jsx"),
 );
-import ActiveTransferBar from "./components/ActiveTransferBar.jsx";
 import { getTransferStatus } from "./utils/transferState.js";
 
 function LoadingFallback() {
@@ -125,7 +124,6 @@ export default function App() {
     localStorage.setItem("onshare-theme", theme);
   }, [theme]);
 
-  // Protect ongoing P2P transfers from accidental tab closure
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (getTransferStatus().isActive) {
@@ -145,8 +143,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-bg-base text-text-primary transition-colors duration-150">
-      {/* Top Header Navbar */}
-      <header className="border-b border-border-subtle bg-bg-surface px-1 sm:px-8 md:px-16 lg:px-28 py-3.5 flex items-center justify-between sticky top-0 z-30 shadow-sm">
+      <header className="border-b border-border-subtle bg-bg-surface px-4 sm:px-8 md:px-16 lg:px-28 py-3.5 flex items-center justify-between sticky top-0 z-30 shadow-sm">
         <Link
           to="/"
           className="flex items-center gap-2 text-x font-bold text-accent-primary hover:opacity-95"
@@ -321,16 +318,13 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main Content Area */}
       <main className="flex-1 w-full mx-auto relative">
-        {/* Core Transfer Engine: Kept mounted across navigation so P2P data channels are preserved */}
         <div className={isDashboardRoute ? "block w-full" : "hidden"}>
           <Suspense fallback={<LoadingFallback />}>
             <Home />
           </Suspense>
         </div>
 
-        {/* Auxiliary Routes rendered dynamically without unmounting the transfer engine */}
         {!isDashboardRoute && (
           <Suspense fallback={<LoadingFallback />}>
             <Routes>
@@ -344,11 +338,8 @@ export default function App() {
             </Routes>
           </Suspense>
         )}
-
-        <ActiveTransferBar />
       </main>
 
-      {/* Footer per AD-4 */}
       <footer className="border-t border-border-subtle bg-bg-surface px-4 sm:px-8 md:px-16 lg:px-28 py-6 text-helper text-text-secondary mt-auto">
         <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-center sm:text-left">

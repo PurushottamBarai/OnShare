@@ -95,9 +95,9 @@ describe('Home Screen & Shared UI Components (UI Brief sections 3 & 4.1)', () =>
   });
 
   describe('DashboardSend Capacity Limits', () => {
-    it('displays Max 35GB badge and exports capacity limits', async () => {
+    it('displays Max 40GB badge and exports capacity limits', async () => {
       const { default: DashboardSend, MAX_SINGLE_FILE_BYTES, MAX_ZIP_TOTAL_BYTES } = await import('../src/components/DashboardSend.jsx');
-      expect(MAX_SINGLE_FILE_BYTES).toBe(35 * 1024 * 1024 * 1024);
+      expect(MAX_SINGLE_FILE_BYTES).toBe(40 * 1024 * 1024 * 1024);
       expect(MAX_ZIP_TOTAL_BYTES).toBe(4 * 1024 * 1024 * 1024);
 
       render(
@@ -105,7 +105,7 @@ describe('Home Screen & Shared UI Components (UI Brief sections 3 & 4.1)', () =>
           <DashboardSend />
         </MemoryRouter>
       );
-      expect(screen.getByText('Max 35GB')).toBeDefined();
+      expect(screen.getByText('Max 40GB')).toBeDefined();
       expect(screen.getByText('Broadcast Mode')).toBeDefined();
     });
   });

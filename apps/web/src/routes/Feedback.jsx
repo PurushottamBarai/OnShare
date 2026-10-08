@@ -7,7 +7,7 @@ export default function Feedback() {
   const [name, setName] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState(null); // 'success' | 'error' | null
+  const [status, setStatus] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
 
   const handleSubmit = async (e) => {
@@ -19,8 +19,12 @@ export default function Feedback() {
     setErrorMessage('');
 
     try {
-      // Simulate API call for OnShare feedback
-      await new Promise(resolve => setTimeout(resolve, 800));
+      const res = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), message: message.trim() }),
+      });
+      if (!res.ok) throw new Error('Feedback request failed');
       setStatus('success');
       setName('');
       setMessage('');
@@ -35,7 +39,6 @@ export default function Feedback() {
   return (
     <main data-testid="route-feedback" className="flex-1 flex flex-col w-full bg-bg-base">
 
-      {/* Top Banner with OnShare theme */}
       <div className="relative w-full bg-gradient-to-r from-accent-hover to-accent-primary py-16 sm:py-20 text-center">
         <h1 className="text-4xl sm:text-5xl font-bold text-bg-base tracking-wide">
           {t('feedbackPage.title')}
@@ -44,7 +47,6 @@ export default function Feedback() {
           {t('feedbackPage.subtitle')}
         </p>
 
-        {/* Bottom subtle wave curve */}
         <div className="absolute bottom-0 left-0 right-0 overflow-hidden leading-none pointer-events-none">
           <svg
             className="relative block w-full h-5 sm:h-6 text-bg-base fill-current"
@@ -56,7 +58,6 @@ export default function Feedback() {
         </div>
       </div>
 
-      {/* Feedback Form Card */}
       <div className="w-full max-w-xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
         {status === 'success' ? (
           <div className="bg-bg-surface border border-border-subtle rounded-xl p-8 text-center animate-fade-in shadow-sm">
@@ -155,7 +156,6 @@ export default function Feedback() {
           </div>
         )}
 
-        {/* Non-intrusive sponsor / ad slot */}
         <AdSlot height="100px" className="mt-8" />
       </div>
     </main>

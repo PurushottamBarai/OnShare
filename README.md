@@ -40,7 +40,7 @@ Unlike traditional cloud-based transfer tools, **OnShare never stores your files
 ### High Capacity & Zero-Memory Streaming
 
 - **Direct-to-Disk Streaming**: Utilizes the Chromium `File System Access API` (`showSaveFilePicker`) to stream incoming chunks straight to disk, preventing browser memory exhaustion.
-- **Up to 35 GB Single File Support**: Handles multi-gigabyte transfers with flat memory consumption.
+- **Up to 40 GB Single File Support**: Handles multi-gigabyte transfers with flat memory consumption.
 - **On-the-Fly ZIP Bundling**: Multi-file transfers are automatically streamed and packed into a single zip archive using `fflate` store mode (up to 4 GB combined).
 
 ### Live Notepad (Real-Time Text Sync)

@@ -15,7 +15,7 @@ function formatBytes(bytes) {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
-export const MAX_SINGLE_FILE_BYTES = 35 * 1024 * 1024 * 1024; // 35 GB
+export const MAX_SINGLE_FILE_BYTES = 40 * 1024 * 1024 * 1024; // 40 GB
 export const MAX_ZIP_TOTAL_BYTES = 4 * 1024 * 1024 * 1024;     // 4 GB
 
 export default function DashboardSend() {
@@ -63,13 +63,13 @@ export default function DashboardSend() {
       const { receiverId } = payload;
       setCodeEntry('');
       setCodeError(null);
-      setReceivers(prev => {
-        if (prev.some(r => r.id === receiverId)) return prev;
-        return [...prev, { id: receiverId, label: `Receiver (${receiverId.slice(-4)})`, status: 'waiting', progress: 0 }];
-      });
-
       const currentFiles = filesRef.current;
       const isMultiFile = currentFiles.length > 1;
+      const totalSize = currentFiles.reduce((acc, f) => acc + (f.size || 0), 0);
+      setReceivers(prev => {
+        if (prev.some(r => r.id === receiverId)) return prev;
+        return [...prev, { id: receiverId, label: `Receiver (${receiverId.slice(-4)})`, status: 'waiting', progress: 0, speedBps: 0, bytesSent: 0, totalSize }];
+      });
       const manifest = {
         transferId: `transfer_${Date.now()}`,
         mode: 'files',
@@ -131,7 +131,7 @@ export default function DashboardSend() {
           setReceivers(prev => prev.map(r => {
             if (r.id !== receiverId) return r;
             if (state === 'WAITING_ACCEPT') return { ...r, status: 'waiting' };
-            if (state === 'ACCEPTED') return { ...r, status: 'sending', progress: 0 };
+            if (state === 'ACCEPTED') return { ...r, status: 'sending', progress: 0, speedBps: 0, bytesSent: 0, totalSize: manifest.totalSize };
             if (state === 'DECLINED') return { ...r, status: 'declined' };
             if (state === 'FAILED') return { ...r, status: 'failed' };
             if (state === 'DONE') return { ...r, status: 'done', progress: 100 };
@@ -198,19 +198,19 @@ export default function DashboardSend() {
     if (!newFiles || newFiles.length === 0) return;
     setFileError(null);
 
-    // 1. Check if any individual file exceeds 35GB
+    // 1. Check if any individual file exceeds 40GB
     const oversizedFile = newFiles.find(f => (f.size || 0) > MAX_SINGLE_FILE_BYTES);
     if (oversizedFile) {
-      setFileError(t('dashboard.fileCapacityExceeded', 'File capacity exceeded, Max Capacity 35GB'));
+      setFileError(t('dashboard.fileCapacityExceeded', 'File capacity exceeded, Max Capacity 40GB'));
       return;
     }
 
     const candidateFiles = [...files, ...newFiles];
     const totalBytes = candidateFiles.reduce((acc, f) => acc + (f.size || 0), 0);
 
-    // 2. Check if total combined exceeds 35GB
+    // 2. Check if total combined exceeds 40GB
     if (totalBytes > MAX_SINGLE_FILE_BYTES) {
-      setFileError(t('dashboard.fileCapacityExceeded', 'File capacity exceeded, Max Capacity 35GB'));
+      setFileError(t('dashboard.fileCapacityExceeded', 'File capacity exceeded, Max Capacity 40GB'));
       return;
     }
 
@@ -219,7 +219,7 @@ export default function DashboardSend() {
       setFileError(
         t(
           'dashboard.zipCapacityExceeded',
-          'Multiple files are zipped (Max 4GB). Please send files larger than 4GB individually (up to 35GB).'
+          'Multiple files are zipped (Max 4GB). Please send files larger than 4GB individually (up to 40GB).'
         )
       );
       return;
@@ -343,7 +343,7 @@ export default function DashboardSend() {
           <span>{t('nav.send')}</span>
         </div>
 
-        {/* Broadcast Mode Toggle positioned between Send and Max 35GB */}
+        {/* Broadcast Mode Toggle positioned between Send and Max 40GB */}
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-text-secondary select-none">
             {t('dashboard.broadcastMode', 'Broadcast Mode')}
@@ -369,7 +369,7 @@ export default function DashboardSend() {
           </button>
         </div>
 
-        <span className="text-xs text-text-secondary font-medium">Max 35GB</span>
+        <span className="text-xs text-text-secondary font-medium">Max 40GB</span>
       </div>
 
       {fileError && (

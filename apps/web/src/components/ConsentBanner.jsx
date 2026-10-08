@@ -1,11 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
-/**
- * ConsentBanner Component (PRD AD-3)
- * Prompts user for advertising and cookie consent where required.
- * Persists choice in localStorage. Never obscures core transfer controls or code display.
- */
 export default function ConsentBanner() {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(false);

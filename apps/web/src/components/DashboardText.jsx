@@ -327,7 +327,7 @@ const DashboardText = forwardRef((props, ref) => {
             <span>
               {t(
                 'dashboard.textLimitNotice',
-                'Maximum text limit reached (500,000 characters). For larger documents, please use the Send Files tab (up to 35GB).'
+                'Maximum text limit reached (500,000 characters). For larger documents, please use the Send Files tab (up to 40GB).'
               )}
             </span>
           </div>
