@@ -30,6 +30,9 @@ export class ReceiverSink {
     this.fileHandle = null;
     this.writableStream = null;
     this.writeQueue = Promise.resolve();
+    this.pendingWriteBatch = [];
+    this.pendingWriteBytes = 0;
+    this.MAX_WRITE_BATCH_BYTES = 512 * 1024; // 512 KiB write batch to minimize disk syscalls
     this.chunks = []; // Blob fallback chunks
     this.isCompleted = false;
     this.isCancelled = false;
@@ -37,6 +40,33 @@ export class ReceiverSink {
     this.lastAckBytes = 0;
 
     this.bindDataChannel();
+  }
+
+  flushWriteBatch() {
+    if (!this.writableStream || this.pendingWriteBatch.length === 0) return;
+
+    let bufferToWrite;
+    if (this.pendingWriteBatch.length === 1) {
+      bufferToWrite = this.pendingWriteBatch[0];
+    } else {
+      const merged = new Uint8Array(this.pendingWriteBytes);
+      let offset = 0;
+      for (let i = 0; i < this.pendingWriteBatch.length; i++) {
+        merged.set(this.pendingWriteBatch[i], offset);
+        offset += this.pendingWriteBatch[i].byteLength;
+      }
+      bufferToWrite = merged;
+    }
+
+    this.pendingWriteBatch = [];
+    this.pendingWriteBytes = 0;
+
+    this.writeQueue = this.writeQueue.then(async () => {
+      if (this.isCancelled || !this.writableStream) return;
+      await this.writableStream.write(bufferToWrite);
+    }).catch((err) => {
+      if (!this.isCancelled && this.onError) this.onError(err);
+    });
   }
 
   determineFilename() {
@@ -95,12 +125,12 @@ export class ReceiverSink {
       this.totalBytesReceived += payload.byteLength;
 
       if (this.writableStream) {
-        this.writeQueue = this.writeQueue.then(async () => {
-          if (this.isCancelled || !this.writableStream) return;
-          await this.writableStream.write(payload);
-        }).catch((err) => {
-          if (!this.isCancelled && this.onError) this.onError(err);
-        });
+        this.pendingWriteBatch.push(payload);
+        this.pendingWriteBytes += payload.byteLength;
+
+        if (this.pendingWriteBytes >= this.MAX_WRITE_BATCH_BYTES || isFinal) {
+          this.flushWriteBatch();
+        }
       } else {
         this.chunks.push(payload);
       }
@@ -149,6 +179,9 @@ export class ReceiverSink {
 
   async finishDownload() {
     this.isCompleted = true;
+
+    // Flush any pending write batch before closing stream
+    this.flushWriteBatch();
 
     // Await all queued chunk writes before closing the stream
     if (this.writeQueue) {
@@ -214,6 +247,8 @@ export class ReceiverSink {
 
   cancel() {
     this.isCancelled = true;
+    this.pendingWriteBatch = [];
+    this.pendingWriteBytes = 0;
     this.writeQueue = Promise.resolve();
     if (this.writableStream) {
       try { this.writableStream.abort(); } catch { /* ignore */ }

@@ -67,7 +67,6 @@ export class SenderPipeline {
     this.startTime = null;
 
     this.receiverAcknowledgedBytes = 0;
-    this.maxInFlightBytes = 4 * 1024 * 1024; // 4 MiB sliding window
     this.notifyAckReceived = null;
 
     if (this.controlChannel) {
@@ -89,7 +88,7 @@ export class SenderPipeline {
     }
 
     if (this.dataChannel) {
-      this.dataChannel.bufferedAmountLowThreshold = 256 * 1024; // 256 KiB
+      this.dataChannel.bufferedAmountLowThreshold = 512 * 1024; // 512 KiB
     }
   }
 
@@ -114,7 +113,7 @@ export class SenderPipeline {
   }
 
   async waitForBufferDrain() {
-    if (!this.dataChannel || this.dataChannel.bufferedAmount <= 256 * 1024) return;
+    if (!this.dataChannel || this.dataChannel.bufferedAmount <= 512 * 1024) return;
     return new Promise((resolve) => {
       let resolved = false;
       let timer = null;
@@ -131,37 +130,26 @@ export class SenderPipeline {
 
       this.dataChannel.addEventListener('bufferedamountlow', onLow);
 
-      // Dual-trigger polling fallback every 30ms prevents edge-trigger deadlock
+      // Fast-polling fallback every 15ms prevents edge-trigger deadlock
       timer = setInterval(() => {
         if (
           !this.dataChannel ||
           this.dataChannel.readyState !== 'open' ||
-          this.dataChannel.bufferedAmount <= 256 * 1024 ||
+          this.dataChannel.bufferedAmount <= 512 * 1024 ||
           this.isCancelled
         ) {
           cleanup();
         }
-      }, 30);
+      }, 15);
     });
   }
 
   async sendFrame(payload, offset, isFinal) {
     if (this.isCancelled) throw new Error('Transfer cancelled');
 
-    // 1. DataChannel buffer backpressure with dual-trigger drain
-    if (this.dataChannel.bufferedAmount > 1024 * 1024) {
+    // Continuous saturation: drain only when kernel buffer exceeds 2 MiB
+    if (this.dataChannel.bufferedAmount > 2 * 1024 * 1024) {
       await this.waitForBufferDrain();
-    }
-
-    // 2. Application-level sliding window pacing against receiver ACKs
-    if (
-      this.totalBytesTarget > this.maxInFlightBytes &&
-      this.totalBytesSent - this.receiverAcknowledgedBytes > this.maxInFlightBytes
-    ) {
-      await Promise.race([
-        new Promise((res) => { this.notifyAckReceived = res; }),
-        new Promise((res) => setTimeout(res, 150)),
-      ]);
     }
 
     if (this.isCancelled) throw new Error('Transfer cancelled');

@@ -9,7 +9,7 @@
  */
 
 export const FRAME_HEADER_SIZE = 12;
-export const DEFAULT_CHUNK_SIZE = 16 * 1024; // 16 KiB
+export const DEFAULT_CHUNK_SIZE = 64 * 1024; // 64 KiB
 export const FLAG_FINAL_FRAME = 0x01;
 
 /**
