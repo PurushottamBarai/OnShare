@@ -83,7 +83,7 @@ export default function DashboardSend() {
       const pm = new PeerManager({
         peerId: receiverId,
         role: 'sender',
-        iceServers: client.iceServers,
+        iceServers: (payload.iceServers && payload.iceServers.length > 0) ? payload.iceServers : client.iceServers,
         signalingClient: client,
         onControlMessage: (data) => {
           if (data.type === 'complete') {
@@ -226,10 +226,26 @@ export default function DashboardSend() {
     }
 
     setFiles(candidateFiles);
+    filesRef.current = candidateFiles;
     if (isBroadcast && broadcastCode) {
       signalingRef.current?.invalidateBroadcast();
       setBroadcastCode(null);
     }
+    // Update any connected peer managers that are waiting for acceptance
+    peerManagersRef.current.forEach((pm) => {
+      if (pm.state === 'WAITING_ACCEPT' || pm.state === 'CONNECTING') {
+        const isMulti = candidateFiles.length > 1;
+        pm.sendManifest?.({
+          transferId: `transfer_${Date.now()}`,
+          mode: 'files',
+          senderLabel: deviceLabel,
+          totalSize: candidateFiles.reduce((acc, f) => acc + (f.size || 0), 0),
+          zip: isMulti,
+          zipFilename: isMulti ? generateZipFilename() : undefined,
+          files: candidateFiles.map(f => ({ name: f.name, size: f.size, type: f.type })),
+        });
+      }
+    });
     ensureSession();
   };
 
@@ -300,6 +316,10 @@ export default function DashboardSend() {
   const handleAddReceiver = (e) => {
     e.preventDefault();
     if (!codeEntry || codeEntry.length !== 6 || lockoutSeconds > 0) return;
+    if (files.length === 0) {
+      setFileError(t('dashboard.selectFilesFirst', 'Please select at least one file to send'));
+      return;
+    }
     setCodeError(null);
     ensureSession();
     signalingRef.current?.addReceiver(codeEntry);

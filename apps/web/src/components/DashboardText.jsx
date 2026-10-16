@@ -103,7 +103,7 @@ const DashboardText = forwardRef((props, ref) => {
       const pm = new PeerManager({
         peerId: receiverId,
         role: 'sender',
-        iceServers: client.iceServers,
+        iceServers: (payload.iceServers && payload.iceServers.length > 0) ? payload.iceServers : client.iceServers,
         signalingClient: client,
         onChannelsReady: ({ textChannel, controlChannel }) => {
           if (textSessionRef.current) {
@@ -222,6 +222,10 @@ const DashboardText = forwardRef((props, ref) => {
   const handleAddReceiver = (e) => {
     e.preventDefault();
     if (!codeEntry || codeEntry.length !== 6 || lockoutSeconds > 0) return;
+    if (!text || text.trim().length === 0) {
+      setCodeError(t('dashboard.enterTextFirst', 'Please enter some text to send'));
+      return;
+    }
     setCodeError(null);
     ensureSession();
     signalingRef.current?.addReceiver(codeEntry);

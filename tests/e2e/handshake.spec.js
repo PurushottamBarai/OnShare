@@ -72,7 +72,7 @@ test.describe('Part 3 Handshake: Two-tab Receiver and Sender connection', () => 
     await receiverPage.goto('/receive');
 
     // Receiver gets 6-digit code
-    const codeDisplay = receiverPage.locator('.text-4xl.font-mono');
+    const codeDisplay = receiverPage.locator('.font-mono.select-all');
     await expect(codeDisplay).toBeVisible({ timeout: 10000 });
     await expect(codeDisplay).not.toHaveText(/------/, { timeout: 10000 });
     const formattedCode = await codeDisplay.innerText();
@@ -112,8 +112,8 @@ test.describe('Part 3 Handshake: Two-tab Receiver and Sender connection', () => 
     await addReceiverBtn.click();
 
     // Sender sees receiver added in list with status pill
-    await expect(senderPage.locator('text=Receiver')).toBeVisible({ timeout: 10000 });
-    await expect(senderPage.locator('text=%')).toBeVisible({ timeout: 10000 });
+    await expect(senderPage.locator('span.font-semibold:has-text("Receiver")')).toBeVisible({ timeout: 10000 });
+    await expect(senderPage.locator('span.font-mono:has-text("%")')).toBeVisible({ timeout: 10000 });
 
     // 4. Receiver sees Accept / Decline prompt with manifest info
     await expect(receiverPage.locator('text=2 files')).toBeAttached({ timeout: 10000 });
@@ -126,7 +126,7 @@ test.describe('Part 3 Handshake: Two-tab Receiver and Sender connection', () => 
     await expect(receiverPage.locator('text=Transfer Complete')).toBeVisible({ timeout: 5000 });
 
     // Sender's status updates to done
-    await expect(senderPage.locator('text=100%')).toBeVisible({ timeout: 5000 });
+    await expect(senderPage.locator('span.font-mono:has-text("100%")')).toBeVisible({ timeout: 5000 });
 
     await receiverContext.close();
     await senderContext.close();
@@ -139,7 +139,7 @@ test.describe('Part 3 Handshake: Two-tab Receiver and Sender connection', () => 
     await receiverPage.goto('/receive');
 
     // Receiver gets code
-    const codeDisplay = receiverPage.locator('.text-4xl.font-mono');
+    const codeDisplay = receiverPage.locator('.font-mono.select-all');
     await expect(codeDisplay).toBeVisible({ timeout: 20000 });
     await expect(codeDisplay).not.toHaveText(/------/, { timeout: 20000 });
     const formattedCode = await codeDisplay.innerText();
@@ -156,6 +156,10 @@ test.describe('Part 3 Handshake: Two-tab Receiver and Sender connection', () => 
     const senderPage = await senderContext.newPage();
     await senderPage.goto('/send');
 
+    await senderPage.setInputFiles('input[type="file"]', [
+      { name: 'dummy.txt', mimeType: 'text/plain', buffer: Buffer.from('data') }
+    ]);
+
     const senderCodeInput = senderPage.locator('input[type="text"][maxLength="6"]:visible');
     await senderCodeInput.fill(code);
     const addReceiverBtn = senderPage.locator('button[type="submit"]:visible');
@@ -166,8 +170,8 @@ test.describe('Part 3 Handshake: Two-tab Receiver and Sender connection', () => 
     const errorText = senderPage.locator('p.text-status-error');
     await expect(errorText).toBeVisible({ timeout: 20000 });
 
-    // 4. Receiver clicks Regenerate Code
-    const regenBtn = receiverPage.locator('button:has-text("Regenerate")');
+    // 4. Receiver clicks Retry / Regenerate Code
+    const regenBtn = receiverPage.locator('button:has-text("Retry"), button:has-text("Regenerate")').first();
     await regenBtn.click();
 
     // Receiver gets a new valid code and returns to waiting state

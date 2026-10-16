@@ -372,6 +372,30 @@ export default function DashboardReceive({ onTextSessionActive }) {
       {/* States rendering */}
       {receiverState !== 'WAITING' && receiverState !== 'CONNECTING' && (
         <div className="flex-1">
+        {receiverState === 'MATCHED' && (
+          <div className="w-full p-6 rounded-xl bg-bg-surface border border-border-subtle shadow-sm flex flex-col items-center justify-center space-y-3.5 text-center">
+            <div className="relative flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full border-2 border-accent-primary/20 border-t-accent-primary animate-spin" />
+              <div className="absolute w-4 h-4 rounded-full bg-accent-primary animate-pulse" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-text-primary">
+                Connecting with sender...
+              </p>
+              <p className="text-xs text-text-secondary mt-1">
+                Negotiating secure peer connection
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleDecline}
+              className="text-xs px-3 py-1.5 rounded bg-bg-elevated hover:bg-bg-elevated/80 border border-border-subtle text-text-secondary hover:text-status-error transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
         {receiverState === 'AWAITING_ACCEPT' && manifest && (
           <div className="w-full p-4 rounded-lg bg-bg-surface border border-border-subtle shadow-sm flex flex-col gap-3">
             <div className="flex items-center justify-center py-1">

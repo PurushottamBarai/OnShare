@@ -39,6 +39,10 @@ export class PeerManager {
     this.state = 'CONNECTING'; // 'CONNECTING' | 'WAITING_ACCEPT' | 'ACCEPTED' | 'TRANSFERRING' | 'DONE' | 'DECLINED' | 'FAILED' | 'CLOSED'
     this.pendingCandidates = [];
     this.disconnectTimeout = null;
+    this.manifestToSend = null;
+    this.manifestRetryTimer = null;
+    this.manifestRequestTimer = null;
+    this.hasReceivedManifest = false;
 
     if (typeof window !== 'undefined') {
       window.__activePeerManagers = window.__activePeerManagers || new Set();
@@ -58,6 +62,8 @@ export class PeerManager {
       this.setState('FAILED', 'WebRTC not supported in this environment');
       return;
     }
+
+    this.manifestToSend = manifestToSend;
 
     this.pc = new RTCPeerConnection({
       iceServers: this.iceServers,
@@ -137,13 +143,32 @@ export class PeerManager {
     }
   }
 
+  sendManifest(manifest) {
+    this.manifestToSend = manifest;
+    if (this.role === 'sender' && this.controlChannel && this.controlChannel.readyState === 'open') {
+      try {
+        this.controlChannel.send(JSON.stringify({
+          type: 'manifest',
+          ...this.manifestToSend,
+        }));
+        this.setState('WAITING_ACCEPT');
+      } catch (e) {
+        console.error('[PeerManager] Failed to send updated manifest:', e);
+      }
+    }
+  }
+
   setupControlChannel(channel, manifestToSend) {
+    if (manifestToSend) {
+      this.manifestToSend = manifestToSend;
+    }
+
     const sendManifestIfReady = () => {
-      if (this.role === 'sender' && manifestToSend && channel.readyState === 'open') {
+      if (this.role === 'sender' && this.manifestToSend && channel.readyState === 'open') {
         try {
           channel.send(JSON.stringify({
             type: 'manifest',
-            ...manifestToSend,
+            ...this.manifestToSend,
           }));
           this.setState('WAITING_ACCEPT');
         } catch (e) {
@@ -152,12 +177,54 @@ export class PeerManager {
       }
     };
 
+    const requestManifestIfReady = () => {
+      if (this.role === 'receiver' && !this.hasReceivedManifest && channel.readyState === 'open') {
+        try {
+          channel.send(JSON.stringify({ type: 'request_manifest' }));
+        } catch {
+          // ignore
+        }
+      }
+    };
+
     channel.onopen = () => {
-      sendManifestIfReady();
+      if (this.role === 'sender') {
+        sendManifestIfReady();
+        if (!this.manifestRetryTimer) {
+          let retries = 0;
+          this.manifestRetryTimer = setInterval(() => {
+            if (this.state === 'WAITING_ACCEPT' && this.role === 'sender' && channel.readyState === 'open' && retries < 4) {
+              retries++;
+              sendManifestIfReady();
+            } else {
+              if (this.manifestRetryTimer) clearInterval(this.manifestRetryTimer);
+              this.manifestRetryTimer = null;
+            }
+          }, 1500);
+        }
+      } else if (this.role === 'receiver') {
+        requestManifestIfReady();
+        if (!this.manifestRequestTimer) {
+          let requests = 0;
+          this.manifestRequestTimer = setInterval(() => {
+            if (!this.hasReceivedManifest && channel.readyState === 'open' && requests < 5) {
+              requests++;
+              requestManifestIfReady();
+            } else {
+              if (this.manifestRequestTimer) clearInterval(this.manifestRequestTimer);
+              this.manifestRequestTimer = null;
+            }
+          }, 1000);
+        }
+      }
     };
 
     if (channel.readyState === 'open') {
-      sendManifestIfReady();
+      if (this.role === 'sender') {
+        sendManifestIfReady();
+      } else {
+        requestManifestIfReady();
+      }
     }
 
     channel.onmessage = (event) => {
@@ -168,12 +235,37 @@ export class PeerManager {
           this.onControlMessage(data);
         }
 
-        if (data.type === 'manifest') {
+        if (data.type === 'request_manifest') {
+          if (this.role === 'sender') {
+            sendManifestIfReady();
+          }
+        } else if (data.type === 'manifest_ack') {
+          if (this.manifestRetryTimer) {
+            clearInterval(this.manifestRetryTimer);
+            this.manifestRetryTimer = null;
+          }
+        } else if (data.type === 'manifest') {
+          this.hasReceivedManifest = true;
+          if (this.manifestRequestTimer) {
+            clearInterval(this.manifestRequestTimer);
+            this.manifestRequestTimer = null;
+          }
+          if (channel.readyState === 'open') {
+            try {
+              channel.send(JSON.stringify({ type: 'manifest_ack' }));
+            } catch {
+              // ignore
+            }
+          }
           this.setState('WAITING_ACCEPT', data);
           if (this.onManifest) {
             this.onManifest(data);
           }
         } else if (data.type === 'accept') {
+          if (this.manifestRetryTimer) {
+            clearInterval(this.manifestRetryTimer);
+            this.manifestRetryTimer = null;
+          }
           this.setState('ACCEPTED');
         } else if (data.type === 'decline') {
           this.setState('DECLINED');
@@ -261,6 +353,14 @@ export class PeerManager {
   }
 
   close() {
+    if (this.manifestRetryTimer) {
+      clearInterval(this.manifestRetryTimer);
+      this.manifestRetryTimer = null;
+    }
+    if (this.manifestRequestTimer) {
+      clearInterval(this.manifestRequestTimer);
+      this.manifestRequestTimer = null;
+    }
     if (this.disconnectTimeout) {
       clearTimeout(this.disconnectTimeout);
       this.disconnectTimeout = null;

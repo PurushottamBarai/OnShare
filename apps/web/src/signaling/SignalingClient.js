@@ -195,6 +195,9 @@ export class SignalingClient {
           break;
 
         case 'session.receiverMatched':
+          if (msg.payload?.iceServers && Array.isArray(msg.payload.iceServers) && msg.payload.iceServers.length > 0) {
+            this.iceServers = msg.payload.iceServers;
+          }
           this.emit('session.receiverMatched', msg.payload);
           break;
 
