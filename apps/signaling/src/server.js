@@ -308,14 +308,18 @@ export function createServer(port = 8787) {
       req.on('end', () => {
         try {
           const { name, message, email } = JSON.parse(body || '{}');
+          const cleanName = typeof name === 'string' ? name.trim().slice(0, 100) : 'Anonymous';
+          const cleanMessage = typeof message === 'string' ? message.trim().slice(0, 2500) : '';
+          const cleanEmail = typeof email === 'string' ? email.trim().slice(0, 120) : '';
+
           const resendKey = process.env.RESEND_API_KEY;
           if (resendKey) {
             const payload = JSON.stringify({
               from: 'OnShare <feedback@onshare.me>',
               to: [process.env.FEEDBACK_RECEIVER_EMAIL || 'purushottamx.in@gmail.com'],
-              reply_to: email || undefined,
-              subject: `[OnShare Feedback] from ${name || 'User'}`,
-              text: `Sender Name: ${name || 'Anonymous'}\nSender Email: ${email || 'Not provided'}\n\nMessage:\n${message || ''}`,
+              reply_to: cleanEmail || undefined,
+              subject: `[OnShare Feedback] from ${cleanName || 'User'}`,
+              text: `Sender Name: ${cleanName || 'Anonymous'}\nSender Email: ${cleanEmail || 'Not provided'}\n\nMessage:\n${cleanMessage || ''}`,
             });
 
             const resendReq = https.request('https://api.resend.com/emails', {

@@ -103,6 +103,7 @@ export default function Feedback() {
                   id="feedback-name"
                   type="text"
                   required
+                  maxLength={100}
                   placeholder={t('feedbackPage.yourNamePlaceholder')}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -112,16 +113,22 @@ export default function Feedback() {
               </div>
 
               <div>
-                <label
-                  htmlFor="feedback-message"
-                  className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2"
-                >
-                  {t('feedbackPage.yourMessage')}
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label
+                    htmlFor="feedback-message"
+                    className="block text-xs font-bold text-text-secondary uppercase tracking-wider"
+                  >
+                    {t('feedbackPage.yourMessage')}
+                  </label>
+                  <span className="text-[11px] text-text-secondary font-mono">
+                    {message.length} / 2000
+                  </span>
+                </div>
                 <textarea
                   id="feedback-message"
                   required
                   rows={5}
+                  maxLength={2000}
                   placeholder={t('feedbackPage.yourMessagePlaceholder')}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
