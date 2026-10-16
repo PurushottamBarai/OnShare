@@ -9,6 +9,9 @@ export async function generateIceServers(userId, env = {}) {
     'stun:stun1.l.google.com:19302',
     'stun:stun2.l.google.com:19302',
     'stun:stun.cloudflare.com:3478',
+    'stun:stun.nextcloud.com:443',
+    'stun:stun.sipgate.net:3478',
+    'stun:openrelay.metered.ca:80',
   ];
 
   const servers = [{ urls: stunServers }];

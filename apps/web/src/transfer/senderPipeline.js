@@ -69,6 +69,9 @@ export class SenderPipeline {
     this.receiverAcknowledgedBytes = 0;
     this.notifyAckReceived = null;
 
+    this.lastProgressReportTime = 0;
+    this.PROGRESS_THROTTLE_MS = 200; // Throttle UI progress dispatches to 5 fps to free JS event loop
+
     if (this.controlChannel) {
       this.handleControlMessage = (event) => {
         try {
@@ -88,7 +91,7 @@ export class SenderPipeline {
     }
 
     if (this.dataChannel) {
-      this.dataChannel.bufferedAmountLowThreshold = 512 * 1024; // 512 KiB
+      this.dataChannel.bufferedAmountLowThreshold = 2 * 1024 * 1024; // 2 MiB low-water mark
     }
   }
 
@@ -113,7 +116,8 @@ export class SenderPipeline {
   }
 
   async waitForBufferDrain() {
-    if (!this.dataChannel || this.dataChannel.bufferedAmount <= 512 * 1024) return;
+    const lowWaterMark = 2 * 1024 * 1024;
+    if (!this.dataChannel || this.dataChannel.bufferedAmount <= lowWaterMark) return;
     return new Promise((resolve) => {
       let resolved = false;
       let timer = null;
@@ -135,7 +139,7 @@ export class SenderPipeline {
         if (
           !this.dataChannel ||
           this.dataChannel.readyState !== 'open' ||
-          this.dataChannel.bufferedAmount <= 512 * 1024 ||
+          this.dataChannel.bufferedAmount <= lowWaterMark ||
           this.isCancelled
         ) {
           cleanup();
@@ -147,8 +151,8 @@ export class SenderPipeline {
   async sendFrame(payload, offset, isFinal) {
     if (this.isCancelled) throw new Error('Transfer cancelled');
 
-    // Continuous saturation: drain only when kernel buffer exceeds 2 MiB
-    if (this.dataChannel.bufferedAmount > 2 * 1024 * 1024) {
+    // Continuous saturation: drain only when kernel buffer exceeds 4 MiB
+    if (this.dataChannel.bufferedAmount > 4 * 1024 * 1024) {
       await this.waitForBufferDrain();
     }
 
@@ -158,10 +162,16 @@ export class SenderPipeline {
     this.dataChannel.send(frame);
 
     this.totalBytesSent += (payload ? payload.byteLength : 0);
-    this.reportProgress();
+    this.reportProgress(isFinal);
   }
 
-  reportProgress() {
+  reportProgress(force = false) {
+    const now = performance.now();
+    if (!force && this.lastProgressReportTime && (now - this.lastProgressReportTime < this.PROGRESS_THROTTLE_MS)) {
+      return;
+    }
+    this.lastProgressReportTime = now;
+
     if (!this.startTime) this.startTime = Date.now();
     const elapsedSec = (Date.now() - this.startTime) / 1000;
     const speedBps = elapsedSec > 0 ? this.totalBytesSent / elapsedSec : 0;
@@ -194,6 +204,7 @@ export class SenderPipeline {
       }
 
       if (!this.isCancelled) {
+        this.reportProgress(true); // Force final 100% progress update
         if (this.onComplete) {
           this.onComplete({ totalBytes: this.totalBytesSent });
         }
@@ -206,10 +217,9 @@ export class SenderPipeline {
   }
 
   /**
-   * Stream a single file unchanged (PRD FL-1, TRD 7.3)
+   * Stream a single file unchanged using buffered 1 MiB reads and 64 KiB chunks
    */
   async streamSingleFile(file) {
-    let offset = 0;
     const fileSize = file.size;
 
     // Handle 0-byte file (FL-4)
@@ -218,16 +228,27 @@ export class SenderPipeline {
       return;
     }
 
-    while (offset < fileSize) {
-      if (this.isCancelled) return;
-      const end = Math.min(offset + DEFAULT_CHUNK_SIZE, fileSize);
-      const slice = file.slice(offset, end);
-      const buffer = await slice.arrayBuffer();
-      const chunk = new Uint8Array(buffer);
-      const isFinal = end >= fileSize;
+    const BLOCK_READ_SIZE = 1024 * 1024; // 1 MiB in-memory read buffer
+    let fileOffset = 0;
 
-      await this.sendFrame(chunk, offset, isFinal);
-      offset = end;
+    while (fileOffset < fileSize) {
+      if (this.isCancelled) return;
+      const blockEnd = Math.min(fileOffset + BLOCK_READ_SIZE, fileSize);
+      const slice = file.slice(fileOffset, blockEnd);
+      const buffer = await slice.arrayBuffer();
+      const blockBytes = new Uint8Array(buffer);
+
+      let innerOffset = 0;
+      while (innerOffset < blockBytes.byteLength) {
+        if (this.isCancelled) return;
+        const chunkEnd = Math.min(innerOffset + DEFAULT_CHUNK_SIZE, blockBytes.byteLength);
+        const chunkPayload = blockBytes.subarray(innerOffset, chunkEnd);
+        const isFinal = (fileOffset + chunkEnd) >= fileSize;
+
+        await this.sendFrame(chunkPayload, fileOffset + innerOffset, isFinal);
+        innerOffset = chunkEnd;
+      }
+      fileOffset = blockEnd;
     }
   }
 

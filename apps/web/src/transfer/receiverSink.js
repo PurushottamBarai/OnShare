@@ -32,12 +32,14 @@ export class ReceiverSink {
     this.writeQueue = Promise.resolve();
     this.pendingWriteBatch = [];
     this.pendingWriteBytes = 0;
-    this.MAX_WRITE_BATCH_BYTES = 512 * 1024; // 512 KiB write batch to minimize disk syscalls
+    this.MAX_WRITE_BATCH_BYTES = 1024 * 1024; // 1 MiB write batch to minimize disk syscalls
     this.chunks = []; // Blob fallback chunks
     this.isCompleted = false;
     this.isCancelled = false;
     this.startTime = null;
     this.lastAckBytes = 0;
+    this.lastProgressReportTime = 0;
+    this.PROGRESS_THROTTLE_MS = 200; // Throttle UI progress dispatches to 5 fps
 
     this.bindDataChannel();
   }
@@ -136,7 +138,7 @@ export class ReceiverSink {
       }
     }
 
-    this.reportProgress();
+    this.reportProgress(isFinal);
 
     // Send periodic progress ACK back to sender every 512 KiB
     if (this.totalBytesReceived - this.lastAckBytes >= 512 * 1024) {
@@ -158,7 +160,13 @@ export class ReceiverSink {
     }
   }
 
-  reportProgress() {
+  reportProgress(force = false) {
+    const now = performance.now();
+    if (!force && this.lastProgressReportTime && (now - this.lastProgressReportTime < this.PROGRESS_THROTTLE_MS)) {
+      return;
+    }
+    this.lastProgressReportTime = now;
+
     const elapsedSec = (Date.now() - (this.startTime || Date.now())) / 1000;
     const speedBps = elapsedSec > 0 ? this.totalBytesReceived / elapsedSec : 0;
     const target = this.totalBytesExpected || this.totalBytesReceived || 1;
@@ -179,6 +187,7 @@ export class ReceiverSink {
 
   async finishDownload() {
     this.isCompleted = true;
+    this.reportProgress(true); // Force final 100% progress update
 
     // Flush any pending write batch before closing stream
     this.flushWriteBatch();
