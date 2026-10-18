@@ -31,6 +31,11 @@ export default function DashboardReceive({ onTextSessionActive }) {
   const signalingRef = useRef(null);
   const peerManagerRef = useRef(null);
   const receiverSinkRef = useRef(null);
+  const receiverStateRef = useRef(receiverState);
+
+  useEffect(() => {
+    receiverStateRef.current = receiverState;
+  }, [receiverState]);
 
   const initReceiver = (forceNew = false, keepState = null) => {
     cleanup();
@@ -56,7 +61,7 @@ export default function DashboardReceive({ onTextSessionActive }) {
           }
         }
       } catch {
-        // ignore
+        void 0;
       }
     }
 
@@ -76,7 +81,7 @@ export default function DashboardReceive({ onTextSessionActive }) {
           }));
         }
       } catch {
-        // ignore
+        void 0;
       }
     });
 
@@ -97,18 +102,22 @@ export default function DashboardReceive({ onTextSessionActive }) {
         signalingClient: client,
         onManifest: (manifestData) => {
           setManifest(manifestData);
-          setReceiverState('AWAITING_ACCEPT');
+          if (manifestData?.mode === 'text') {
+            peerManagerRef.current?.acceptTransfer();
+            setReceiverState('TEXT_ACTIVE');
+            if (onTextSessionActive) {
+              onTextSessionActive(peerManagerRef.current);
+            }
+          } else {
+            setReceiverState('AWAITING_ACCEPT');
+          }
         },
-        onControlMessage: () => {
-          // If we need to pass this to the text session which is now handled by the dashboard text component?
-          // Since the TextSession needs to be connected to this PeerManager's channels, 
-          // we can just bubble this up via onTextSessionActive callback.
-        },
+        onControlMessage: () => {},
         onStateChange: (state) => {
           if (state === 'DECLINED') setReceiverState('DECLINED');
-          if (state === 'FAILED') {
+          if (state === 'FAILED' || state === 'CLOSED') {
             setReceiverState('FAILED');
-            setErrorMessage('Server connection is experiencing temporary load. Please try again after some time. Aapki asuvidha ke liye humein khed hai!');
+            setErrorMessage('Connection was interrupted or closed by the sender. Please try again.');
           }
         },
       });
@@ -120,7 +129,8 @@ export default function DashboardReceive({ onTextSessionActive }) {
     });
 
     client.on('session.closed', (payload) => {
-      if (receiverState !== 'DONE' && receiverState !== 'DECLINED' && receiverState !== 'TEXT_ACTIVE' && receiverState !== 'TRANSFERRING') {
+      const current = receiverStateRef.current;
+      if (current !== 'DONE' && current !== 'DECLINED' && current !== 'TEXT_ACTIVE' && current !== 'TRANSFERRING') {
         setReceiverState('FAILED');
         setErrorMessage(payload.reason === 'sender_ended' ? 'Sender ended the session.' : 'Sender disconnected.');
       }
@@ -157,10 +167,14 @@ export default function DashboardReceive({ onTextSessionActive }) {
     signalingRef.current = null;
   };
 
+  const initReceiverRef = useRef(initReceiver);
   useEffect(() => {
-    initReceiver();
+    initReceiverRef.current = initReceiver;
+  });
+
+  useEffect(() => {
+    initReceiverRef.current();
     return cleanup;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleCopyCode = async () => {
@@ -170,7 +184,7 @@ export default function DashboardReceive({ onTextSessionActive }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      /* ignore error */
+      void 0;
     }
   };
 
@@ -180,7 +194,7 @@ export default function DashboardReceive({ onTextSessionActive }) {
         sessionStorage.removeItem('onshare_receiver_code');
       }
     } catch {
-      // ignore
+      void 0;
     }
     signalingRef.current?.regenerateCode();
     initReceiver(true);
@@ -205,7 +219,7 @@ export default function DashboardReceive({ onTextSessionActive }) {
       }
     }, 10000);
 
-    if (!signalingRef.current) {
+    if (!signalingRef.current || signalingRef.current.socket?.readyState > 1) {
       initReceiver();
     }
     signalingRef.current?.joinBroadcast(cleanCode);
@@ -218,8 +232,6 @@ export default function DashboardReceive({ onTextSessionActive }) {
       peerManagerRef.current.acceptTransfer();
       setReceiverState('TEXT_ACTIVE');
 
-      // Wait for text channel to be available (ondatachannel may not have
-      // fired for 'text' yet under load — race with control channel manifest)
       const pm = peerManagerRef.current;
       const notifyTextSession = () => {
         if (onTextSessionActive) {
@@ -236,14 +248,11 @@ export default function DashboardReceive({ onTextSessionActive }) {
             notifyTextSession();
           }
         }, 20);
-        // Safety timeout: give up after 10s
         setTimeout(() => clearInterval(poll), 10000);
       }
       return;
     }
 
-    // Wait for data channel to be available (ondatachannel may not have
-    // fired for 'data' yet under load — race with control channel manifest)
     const pm = peerManagerRef.current;
     const startTransfer = () => {
       const sink = new ReceiverSink({
@@ -262,9 +271,8 @@ export default function DashboardReceive({ onTextSessionActive }) {
               sessionStorage.removeItem('onshare_receiver_code');
             }
           } catch {
-            // ignore
+            void 0;
           }
-          // Automatically regenerate fresh 6-digit code for the next transfer
           initReceiver(true, 'DONE');
         },
         onError: (err) => {
@@ -311,10 +319,8 @@ export default function DashboardReceive({ onTextSessionActive }) {
         <span className="text-xs text-text-secondary font-medium">{t('dashboard.yourReceiveCode')}</span>
       </div>
 
-      {/* Waiting / Connecting State: Option 1 Dual-Option Layout */}
       {(receiverState === 'WAITING' || receiverState === 'CONNECTING') && (
         <div className="space-y-3">
-          {/* Top: Enter code from sender inside container box */}
           <div className="w-full py-4 px-4 rounded-xl border border-border-subtle bg-bg-surface flex flex-col items-center justify-center shadow-sm">
             <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider mb-2.5">
               {t('dashboard.enterSenderCode', 'Enter code from sender')}
@@ -364,7 +370,6 @@ export default function DashboardReceive({ onTextSessionActive }) {
             </form>
           </div>
 
-          {/* Divider */}
           <div className="relative flex py-0.5 items-center">
             <div className="flex-grow border-t border-border-subtle"></div>
             <span className="flex-shrink mx-3 text-xs text-text-secondary font-medium lowercase">
@@ -373,7 +378,6 @@ export default function DashboardReceive({ onTextSessionActive }) {
             <div className="flex-grow border-t border-border-subtle"></div>
           </div>
 
-          {/* Bottom: Your direct receive code container box */}
           <div className="w-full py-4 rounded-xl border border-border-subtle bg-bg-surface flex flex-col items-center justify-center shadow-sm">
             <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider mb-2">
               {t('dashboard.yourDirectCode', 'Your direct receive code')}
@@ -391,18 +395,27 @@ export default function DashboardReceive({ onTextSessionActive }) {
                 Regenerate
               </button>
               <button
+                type="button"
                 onClick={handleCopyCode}
-                className="px-3.5 py-1.5 rounded text-xs font-medium bg-bg-elevated border border-border-subtle hover:border-accent-primary text-text-primary flex items-center gap-1.5 transition-colors cursor-pointer"
+                className={`px-3.5 py-1.5 rounded text-xs font-semibold border flex items-center gap-1.5 transition-colors cursor-pointer ${
+                  copied
+                    ? 'bg-status-success/15 border-status-success/40 text-status-success'
+                    : 'bg-bg-elevated border-border-subtle hover:border-accent-primary text-text-primary'
+                }`}
               >
                 {copied ? (
                   <>
-                    <svg className="w-3.5 h-3.5 text-status-success" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
-                    Copied
+                    <svg className="w-3.5 h-3.5 text-status-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-status-success">Copied</span>
                   </>
                 ) : (
                   <>
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                    Copy
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <span>Copy</span>
                   </>
                 )}
               </button>
@@ -411,7 +424,6 @@ export default function DashboardReceive({ onTextSessionActive }) {
         </div>
       )}
 
-      {/* States rendering */}
       {receiverState !== 'WAITING' && receiverState !== 'CONNECTING' && (
         <div className="flex-1">
         {receiverState === 'MATCHED' && (
@@ -438,31 +450,55 @@ export default function DashboardReceive({ onTextSessionActive }) {
           </div>
         )}
 
-        {receiverState === 'AWAITING_ACCEPT' && manifest && (
-          <div className="w-full p-4 rounded-lg bg-bg-surface border border-border-subtle shadow-sm flex flex-col gap-3">
-            <div className="flex items-center justify-center py-1">
-              {manifest.mode === 'text' ? (
-                <p className="text-base font-semibold text-text-primary tracking-wide">Text Session</p>
-              ) : (
-                <p className="text-base font-semibold text-text-primary tracking-wide">
-                  {manifest.files?.length || 0} file{(manifest.files?.length || 0) !== 1 ? 's' : ''} • {formatBytes(manifest.totalSize)}
-                </p>
-              )}
-            </div>
-            {manifest.totalSize > 2 * 1024 * 1024 * 1024 && !(typeof window !== 'undefined' && 'showSaveFilePicker' in window) && (
-              <div className="text-xs p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-text-secondary leading-relaxed">
-                <span className="font-semibold text-amber-600 dark:text-amber-400">Large File Notice:</span>{' '}
-                {t('dashboard.largeFileNotice', 'This transfer exceeds 2GB. Desktop Chrome, Edge, or Brave is recommended for direct-to-disk saving to prevent browser memory limits.')}
+        {receiverState === 'AWAITING_ACCEPT' && (
+          manifest ? (
+            <div className="w-full p-4 rounded-lg bg-bg-surface border border-border-subtle shadow-sm flex flex-col gap-3">
+              <div className="flex items-center justify-center py-1">
+                {manifest.mode === 'text' ? (
+                  <p className="text-base font-semibold text-text-primary tracking-wide">Text Session</p>
+                ) : (
+                  <p className="text-base font-semibold text-text-primary tracking-wide">
+                    {manifest.files?.length || 0} file{(manifest.files?.length || 0) !== 1 ? 's' : ''} • {formatBytes(manifest.totalSize)}
+                  </p>
+                )}
               </div>
-            )}
-            <div className="flex gap-2">
-              <button data-testid="receive-decline-btn" onClick={handleDecline} className="flex-1 py-1.5 rounded text-sm font-medium bg-bg-elevated border border-border-subtle text-text-primary hover:text-status-error transition-colors cursor-pointer">
-                {t('common.decline')}
-              </button>
-              <button data-testid="receive-accept-btn" onClick={handleAccept} className="flex-1 py-1.5 rounded text-sm font-medium bg-accent-primary text-bg-base hover:bg-accent-hover transition-colors cursor-pointer">
-                {t('common.accept')}
-              </button>
+              {manifest.totalSize > 2 * 1024 * 1024 * 1024 && !(typeof window !== 'undefined' && 'showSaveFilePicker' in window) && (
+                <div className="text-xs p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-text-secondary leading-relaxed">
+                  <span className="font-semibold text-amber-600 dark:text-amber-400">Large File Notice:</span>{' '}
+                  {t('dashboard.largeFileNotice', 'This transfer exceeds 2GB. Desktop Chrome, Edge, or Brave is recommended for direct-to-disk saving to prevent browser memory limits.')}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <button data-testid="receive-decline-btn" onClick={handleDecline} className="flex-1 py-1.5 rounded text-sm font-medium bg-bg-elevated border border-border-subtle text-text-primary hover:text-status-error transition-colors cursor-pointer">
+                  {t('common.decline')}
+                </button>
+                <button data-testid="receive-accept-btn" onClick={handleAccept} className="flex-1 py-1.5 rounded text-sm font-medium bg-accent-primary text-bg-base hover:bg-accent-hover transition-colors cursor-pointer">
+                  {t('common.accept')}
+                </button>
+              </div>
             </div>
+          ) : (
+            <div className="w-full p-6 rounded-xl bg-bg-surface border border-border-subtle shadow-sm flex flex-col items-center justify-center space-y-3 text-center">
+              <div className="w-8 h-8 rounded-full border-2 border-accent-primary/20 border-t-accent-primary animate-spin" />
+              <p className="text-xs text-text-secondary">Waiting for transfer details...</p>
+            </div>
+          )
+        )}
+
+        {receiverState === 'TEXT_ACTIVE' && (
+          <div className="w-full p-5 rounded-xl bg-bg-surface border border-border-subtle shadow-sm flex flex-col items-center justify-center space-y-3 text-center">
+            <div className="flex items-center gap-2 text-status-success font-semibold text-sm">
+              <span className="w-2.5 h-2.5 rounded-full bg-status-success animate-pulse" />
+              Live Text Session Active
+            </div>
+            <p className="text-xs text-text-secondary">Connected with sender. Switch to the Text Live tab to chat.</p>
+            <button
+              type="button"
+              onClick={() => initReceiver(true)}
+              className="text-xs px-3.5 py-1.5 rounded bg-bg-elevated border border-border-subtle hover:border-accent-primary text-text-primary transition-colors cursor-pointer"
+            >
+              End Session
+            </button>
           </div>
         )}
 
@@ -507,6 +543,19 @@ export default function DashboardReceive({ onTextSessionActive }) {
              </div>
              <button onClick={initReceiver} className="text-xs px-3 py-1.5 rounded bg-bg-surface border border-border-subtle hover:border-accent-primary transition-colors cursor-pointer text-text-primary flex-shrink-0 self-center">
               Retry
+            </button>
+          </div>
+        )}
+
+        {!['MATCHED', 'AWAITING_ACCEPT', 'TEXT_ACTIVE', 'TRANSFERRING', 'DONE', 'FAILED', 'EXPIRED', 'DECLINED'].includes(receiverState) && (
+          <div className="w-full p-6 rounded-xl bg-bg-surface border border-border-subtle shadow-sm flex flex-col items-center justify-center space-y-3 text-center">
+            <p className="text-sm font-medium text-text-primary">Session in progress</p>
+            <button
+              type="button"
+              onClick={() => initReceiver(true)}
+              className="text-xs px-3 py-1.5 rounded bg-bg-elevated border border-border-subtle hover:border-accent-primary text-text-primary transition-colors cursor-pointer"
+            >
+              Reset Session
             </button>
           </div>
         )}

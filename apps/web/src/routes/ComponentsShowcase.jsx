@@ -16,7 +16,6 @@ export default function ComponentsShowcase() {
         </p>
       </div>
 
-      {/* 1. Status Pill Set */}
       <section className="space-y-4">
         <h2 className="text-h2 text-text-primary">1. Status Pill Set (WCAG 2.1 AA Compliant)</h2>
         <p className="text-helper text-text-secondary">
@@ -34,7 +33,6 @@ export default function ComponentsShowcase() {
         </div>
       </section>
 
-      {/* 2. Device Label Chip */}
       <section className="space-y-4">
         <h2 className="text-h2 text-text-primary">2. Device Label Chip (SN-10)</h2>
         <p className="text-helper text-text-secondary">
@@ -49,7 +47,6 @@ export default function ComponentsShowcase() {
         </div>
       </section>
 
-      {/* 3. Lock-out Banner */}
       <section className="space-y-4">
         <h2 className="text-h2 text-text-primary">3. Lock-out Banner (SN-9, RC-8)</h2>
         <p className="text-helper text-text-secondary">
@@ -71,7 +68,6 @@ export default function ComponentsShowcase() {
         </div>
       </section>
 
-      {/* 4. Reserved Ad Slot */}
       <section className="space-y-4">
         <h2 className="text-h2 text-text-primary">4. Reserved Ad Slot (AD-1)</h2>
         <p className="text-helper text-text-secondary">

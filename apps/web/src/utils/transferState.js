@@ -1,9 +1,8 @@
-// Utility to track active transfer status across routes without unmounting components
 const listeners = new Set();
 
 let currentStatus = {
   isActive: false,
-  role: null, // 'sender' | 'receiver'
+  role: null,
   progress: 0,
   details: '',
 };
@@ -20,7 +19,7 @@ export const setTransferStatus = (update) => {
     try {
       cb(currentStatus);
     } catch {
-      // ignore
+      void 0;
     }
   });
 };

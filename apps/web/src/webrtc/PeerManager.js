@@ -1,7 +1,3 @@
-/**
- * PeerManager (TRD Section 7.1, 7.2, 9)
- * Manages RTCPeerConnection and the "control", "data", and "text" DataChannels.
- */
 export class PeerManager {
   constructor({
     peerId,
@@ -13,8 +9,8 @@ export class PeerManager {
     onStateChange,
     onChannelsReady,
   }) {
-    this.peerId = peerId; // receiverId or 'sender'
-    this.role = role; // 'sender' | 'receiver'
+    this.peerId = peerId;
+    this.role = role;
     this.signalingClient = signalingClient;
     this.iceServers = (iceServers && iceServers.length > 0) ? iceServers : [
       {
@@ -38,7 +34,7 @@ export class PeerManager {
     this.controlChannel = null;
     this.dataChannel = null;
     this.textChannel = null;
-    this.state = 'CONNECTING'; // 'CONNECTING' | 'WAITING_ACCEPT' | 'ACCEPTED' | 'TRANSFERRING' | 'DONE' | 'DECLINED' | 'FAILED' | 'CLOSED'
+    this.state = 'CONNECTING';
     this.pendingCandidates = [];
     this.disconnectTimeout = null;
     this.manifestToSend = null;
@@ -96,7 +92,6 @@ export class PeerManager {
     };
 
     if (this.role === 'sender') {
-      // Sender creates control, data, and text channels
       this.controlChannel = this.pc.createDataChannel('control', { ordered: true });
       this.dataChannel = this.pc.createDataChannel('data', { ordered: true });
       this.dataChannel.binaryType = 'arraybuffer';
@@ -113,12 +108,10 @@ export class PeerManager {
         });
       }
 
-      // Create and send offer
       const offer = await this.pc.createOffer();
       await this.pc.setLocalDescription(offer);
       this.signalingClient.sendSignal('signal.offer', this.peerId, offer);
     } else {
-      // Receiver listens for incoming data channels
       this.pc.ondatachannel = (event) => {
         const { label } = event.channel;
         if (label === 'control') {
@@ -184,7 +177,7 @@ export class PeerManager {
         try {
           channel.send(JSON.stringify({ type: 'request_manifest' }));
         } catch {
-          // ignore
+          void 0;
         }
       }
     };
@@ -256,7 +249,7 @@ export class PeerManager {
             try {
               channel.send(JSON.stringify({ type: 'manifest_ack' }));
             } catch {
-              // ignore
+              void 0;
             }
           }
           this.setState('WAITING_ACCEPT', data);
@@ -307,7 +300,7 @@ export class PeerManager {
           try {
             await this.pc.addIceCandidate(new RTCIceCandidate(cand));
           } catch {
-            // ignore
+            void 0;
           }
         }
         const answer = await this.pc.createAnswer();
@@ -320,7 +313,7 @@ export class PeerManager {
           try {
             await this.pc.addIceCandidate(new RTCIceCandidate(cand));
           } catch {
-            // ignore
+            void 0;
           }
         }
       } else if (signal.type === 'signal.ice') {
@@ -330,7 +323,7 @@ export class PeerManager {
           try {
             await this.pc.addIceCandidate(new RTCIceCandidate(data));
           } catch {
-            // ignore candidate race
+            void 0;
           }
         }
       }
@@ -371,19 +364,19 @@ export class PeerManager {
       window.__activePeerManagers.delete(this);
     }
     if (this.controlChannel) {
-      try { this.controlChannel.close(); } catch { /* ignore */ }
+      try { this.controlChannel.close(); } catch { void 0; }
       this.controlChannel = null;
     }
     if (this.dataChannel) {
-      try { this.dataChannel.close(); } catch { /* ignore */ }
+      try { this.dataChannel.close(); } catch { void 0; }
       this.dataChannel = null;
     }
     if (this.textChannel) {
-      try { this.textChannel.close(); } catch { /* ignore */ }
+      try { this.textChannel.close(); } catch { void 0; }
       this.textChannel = null;
     }
     if (this.pc) {
-      try { this.pc.close(); } catch { /* ignore */ }
+      try { this.pc.close(); } catch { void 0; }
       this.pc = null;
     }
     this.setState('CLOSED');

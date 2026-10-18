@@ -2,7 +2,6 @@ import React, { Suspense, lazy, useState, useEffect, useRef } from "react";
 import { flushSync } from "react-dom";
 import { Routes, Route, Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import ConsentBanner from "./components/ConsentBanner.jsx";
 import { getRouteSEO } from "./utils/seoConfig.js";
 
 const LANGUAGES = [
@@ -64,7 +63,6 @@ export default function App() {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("onshare-theme");
       if (saved) return saved;
-      // In test automation environments, honor emulated dark color scheme
       if (
         (window.navigator.webdriver || window.__TEST_WORKER_INDEX__) &&
         window.matchMedia &&
@@ -146,19 +144,16 @@ export default function App() {
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    // Fallback if View Transitions API is unsupported or user prefers reduced motion
     if (typeof document === "undefined" || !document.startViewTransition || prefersReducedMotion) {
       setTheme(nextTheme);
       return;
     }
 
-    // Prevent broken state from rapid clicks
     if (isTransitioningRef.current) {
       setTheme(nextTheme);
       return;
     }
 
-    // Determine toggle button center coordinates
     let x = window.innerWidth / 2;
     let y = window.innerHeight / 2;
 
@@ -171,7 +166,6 @@ export default function App() {
       y = event.clientY;
     }
 
-    // Calculate maximum radius to the farthest viewport corner
     const endRadius = Math.hypot(
       Math.max(x, window.innerWidth - x),
       Math.max(y, window.innerHeight - y)
@@ -191,8 +185,6 @@ export default function App() {
         });
       });
 
-      // Detect if CSS @property is supported for radial-gradient mask animation;
-      // if not, fall back to animated clip-path: circle()
       const supportsCSSProperty =
         typeof window !== "undefined" &&
         window.CSS &&
@@ -218,7 +210,7 @@ export default function App() {
 
       await transition.finished;
     } catch {
-      // Graceful fallback if transition is interrupted
+      void 0;
     } finally {
       document.documentElement.classList.remove("theme-transitioning");
       isTransitioningRef.current = false;
@@ -277,7 +269,6 @@ export default function App() {
             </Link>
           </nav>
 
-          {/* Language Switcher */}
           <div className="relative">
             <button
               onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
@@ -337,7 +328,6 @@ export default function App() {
             )}
           </div>
 
-          {/* Theme Switcher Toggle (Dark / Light) */}
           <button
             onClick={toggleTheme}
             data-testid="theme-toggle-btn"
@@ -346,7 +336,6 @@ export default function App() {
             title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
           >
             {theme === "dark" ? (
-              // Sun icon for light mode
               <svg
                 className="w-4 h-4 text-accent-primary"
                 fill="none"
@@ -361,7 +350,6 @@ export default function App() {
                 />
               </svg>
             ) : (
-              // Moon icon for dark mode
               <svg
                 className="w-4 h-4 text-accent-primary"
                 fill="none"
@@ -378,7 +366,6 @@ export default function App() {
             )}
           </button>
 
-          {/* Hamburger Menu Button */}
           <button
             className="md:hidden p-2 text-text-secondary hover:text-text-primary focus:outline-none"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -463,8 +450,6 @@ export default function App() {
           </div>
         </div>
       </footer>
-
-      <ConsentBanner />
     </div>
   );
 }

@@ -1,9 +1,5 @@
 import React from 'react';
 
-/**
- * Lockout Banner Component (UI Brief section 4.3, 4.6, SN-9, RC-8)
- * Displayed with status.error background during rate-limited lockouts.
- */
 export default function LockoutBanner({
   remainingSeconds = 60,
   message = 'Too many failed code attempts.',

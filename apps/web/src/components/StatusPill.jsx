@@ -1,17 +1,5 @@
 import React from 'react';
 
-/**
- * Status Pill Component (UI Brief sections 3.3, 3.5, 4.6)
- * Accessibility WCAG 2.1 AA: Color + uppercase text label together.
- *
- * Supported states:
- * - 'connecting' (status.pending)
- * - 'waiting'    (status.warning - "WAITING FOR ACCEPT")
- * - 'sending'    (accent.primary with percentage)
- * - 'done'       (status.success)
- * - 'declined'   (status.error outline)
- * - 'failed'     (status.error)
- */
 export default function StatusPill({ status, progress, label }) {
   const normStatus = (status || 'connecting').toLowerCase();
 

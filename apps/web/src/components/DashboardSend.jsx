@@ -15,8 +15,8 @@ function formatBytes(bytes) {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
-export const MAX_SINGLE_FILE_BYTES = 40 * 1024 * 1024 * 1024; // 40 GB
-export const MAX_ZIP_TOTAL_BYTES = 4 * 1024 * 1024 * 1024;     // 4 GB
+export const MAX_SINGLE_FILE_BYTES = 40 * 1024 * 1024 * 1024;
+export const MAX_ZIP_TOTAL_BYTES = 4 * 1024 * 1024 * 1024;
 
 export default function DashboardSend() {
   const { t } = useTranslation();
@@ -198,7 +198,6 @@ export default function DashboardSend() {
     if (!newFiles || newFiles.length === 0) return;
     setFileError(null);
 
-    // 1. Check if any individual file exceeds 40GB
     const oversizedFile = newFiles.find(f => (f.size || 0) > MAX_SINGLE_FILE_BYTES);
     if (oversizedFile) {
       setFileError(t('dashboard.fileCapacityExceeded', 'File capacity exceeded, Max Capacity 40GB'));
@@ -208,13 +207,11 @@ export default function DashboardSend() {
     const candidateFiles = [...files, ...newFiles];
     const totalBytes = candidateFiles.reduce((acc, f) => acc + (f.size || 0), 0);
 
-    // 2. Check if total combined exceeds 40GB
     if (totalBytes > MAX_SINGLE_FILE_BYTES) {
       setFileError(t('dashboard.fileCapacityExceeded', 'File capacity exceeded, Max Capacity 40GB'));
       return;
     }
 
-    // 3. Check if multiple files exceed 4GB (ZIP format limit)
     if (candidateFiles.length > 1 && totalBytes > MAX_ZIP_TOTAL_BYTES) {
       setFileError(
         t(
@@ -231,7 +228,6 @@ export default function DashboardSend() {
       signalingRef.current?.invalidateBroadcast();
       setBroadcastCode(null);
     }
-    // Update any connected peer managers that are waiting for acceptance
     peerManagersRef.current.forEach((pm) => {
       if (pm.state === 'WAITING_ACCEPT' || pm.state === 'CONNECTING') {
         const isMulti = candidateFiles.length > 1;
@@ -267,7 +263,6 @@ export default function DashboardSend() {
   
   const handleDragLeave = (e) => {
     e.preventDefault();
-    // Only reset if dragging leaves the main container, not child elements
     if (!e.currentTarget.contains(e.relatedTarget)) {
       setIsDragging(false);
     }
@@ -295,7 +290,7 @@ export default function DashboardSend() {
       try {
         pipeline.cancel();
       } catch {
-        // ignore
+        void 0;
       }
       senderPipelinesRef.current.delete(receiverId);
     }
@@ -305,7 +300,7 @@ export default function DashboardSend() {
       try {
         pm.close();
       } catch {
-        // ignore
+        void 0;
       }
       peerManagersRef.current.delete(receiverId);
     }
@@ -350,7 +345,6 @@ export default function DashboardSend() {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {/* Background dim/blur effect when dragging */}
       {isDragging && (
         <div className="absolute inset-0 -m-8 bg-bg-base/60 backdrop-blur-sm z-10 rounded-xl transition-all duration-300 pointer-events-none" />
       )}
@@ -363,7 +357,6 @@ export default function DashboardSend() {
           <span>{t('nav.send')}</span>
         </div>
 
-        {/* Broadcast Mode Toggle positioned between Send and Max 40GB */}
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-text-secondary select-none">
             {t('dashboard.broadcastMode', 'Broadcast Mode')}
@@ -538,9 +531,7 @@ export default function DashboardSend() {
         </div>
       )}
 
-      {/* Receiver Code Input / Broadcast Action Section */}
       <div className="mt-auto flex flex-col w-full">
-        {/* If broadcast is toggled ON */}
         {isBroadcast ? (
           broadcastCode ? (
             <div className="flex items-center justify-between p-3 rounded-lg bg-bg-elevated border border-border-subtle">
@@ -565,14 +556,18 @@ export default function DashboardSend() {
                     setCopiedCode(true);
                     setTimeout(() => setCopiedCode(false), 2000);
                   }}
-                  className="px-3 py-1.5 rounded bg-accent-primary hover:bg-accent-hover text-bg-base font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className={`px-3 py-1.5 rounded font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer ${
+                    copiedCode
+                      ? 'bg-status-success/15 border border-status-success/40 text-status-success'
+                      : 'bg-accent-primary hover:bg-accent-hover text-bg-base'
+                  }`}
                 >
                   {copiedCode ? (
                     <>
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="w-3.5 h-3.5 text-status-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
                       </svg>
-                      <span>Copied</span>
+                      <span className="text-status-success font-semibold">Copied</span>
                     </>
                   ) : (
                     <>

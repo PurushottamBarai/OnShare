@@ -1,23 +1,17 @@
 import { parseAndValidateMessage, serializeMessage } from '@onshare/protocol';
 
-/**
- * SignalingClient (TRD Section 9 & 12)
- * WebSocket client with exponential backoff reconnect and Zod runtime schema validation.
- */
 export class SignalingClient {
   constructor(options = {}) {
     this.baseUrl = options.baseUrl || this.getDefaultSignalingUrl();
-    this.role = null; // 'sender' | 'receiver'
+    this.role = null;
     this.socket = null;
-    this.joinSocket = null; // For receiver after match
+    this.joinSocket = null;
     this.listeners = new Map();
 
-    // Session data
     this.sessionId = null;
     this.senderToken = null;
     this.iceServers = [];
 
-    // Reconnection & heartbeat
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
     this.reconnectTimer = null;
@@ -33,7 +27,6 @@ export class SignalingClient {
     if (import.meta.env?.VITE_SIGNALING_URL) {
       return import.meta.env.VITE_SIGNALING_URL;
     }
-    // Connect directly to 127.0.0.1:8787 when in local dev (port 3000 or 5173)
     if (window.location.port === '3000' || window.location.port === '5173') {
       return `${proto}//127.0.0.1:8787/ws`;
     }
@@ -56,7 +49,7 @@ export class SignalingClient {
         try {
           fn(data);
         } catch {
-          // ignore
+          void 0;
         }
       });
     }
@@ -74,9 +67,6 @@ export class SignalingClient {
     return '';
   }
 
-  /**
-   * Connect as Receiver (HM-1, RC-1)
-   */
   connectReceiver(options = {}) {
     this.role = 'receiver';
     this.isManualClose = false;
@@ -93,9 +83,6 @@ export class SignalingClient {
     this.openSocket(url);
   }
 
-  /**
-   * Connect as Sender (HM-1, SN-1)
-   */
   connectSender(options = {}) {
     this.role = 'sender';
     this.isManualClose = false;
@@ -136,7 +123,7 @@ export class SignalingClient {
         try {
           this.socket.send(raw);
         } catch {
-          // ignore
+          void 0;
         }
       }
     });
@@ -190,7 +177,6 @@ export class SignalingClient {
           this.sessionId = msg.payload.sessionId;
           this.iceServers = msg.payload.iceServers;
           this.emit('receiver.matched', msg.payload);
-          // Receiver opens secondary socket to join the Session DO
           this.joinSession(msg.payload.sessionId, msg.payload.joinToken);
           break;
 
@@ -227,10 +213,11 @@ export class SignalingClient {
     }
   }
 
-  /**
-   * Receiver opens second WebSocket to join session (TRD 5.1)
-   */
   joinSession(sessionId, joinToken) {
+    if (this.joinSocket) {
+      this.cleanSocket(this.joinSocket);
+      this.joinSocket = null;
+    }
     if (!this.pendingJoinMessages) this.pendingJoinMessages = [];
     const workerIndex = this.getWorkerIndex();
     const workerParam = workerIndex ? `&workerIndex=${workerIndex}` : '';
@@ -243,7 +230,7 @@ export class SignalingClient {
         try {
           this.joinSocket.send(raw);
         } catch {
-          // ignore
+          void 0;
         }
       }
       this.emit('joined', { sessionId, joinToken });
@@ -265,27 +252,26 @@ export class SignalingClient {
     });
 
     this.joinSocket.addEventListener('close', (event) => {
+      this.joinSocket = null;
       this.emit('joinClose', event);
     });
   }
 
-  /**
-   * Send JSON message
-   */
   send(type, payload = {}, id = null) {
-    const isReceiverJoined = this.role === 'receiver' && this.joinSocket;
+    const isOtpType = typeof type === 'string' && type.startsWith('receiver.');
+    const isReceiverJoined = !isOtpType && this.role === 'receiver' && this.joinSocket && this.joinSocket.readyState !== 2 && this.joinSocket.readyState !== 3;
     const targetWs = isReceiverJoined ? this.joinSocket : this.socket;
 
     const raw = serializeMessage(type, payload, id);
 
-    if (targetWs && targetWs.readyState === 1 /* OPEN */) {
+    if (targetWs && targetWs.readyState === 1) {
       try {
         targetWs.send(raw);
         return true;
       } catch {
         return false;
       }
-    } else if (targetWs && targetWs.readyState === 0 /* CONNECTING */) {
+    } else if (targetWs && targetWs.readyState === 0) {
       if (isReceiverJoined) {
         if (!this.pendingJoinMessages) this.pendingJoinMessages = [];
         this.pendingJoinMessages.push(raw);
@@ -298,73 +284,43 @@ export class SignalingClient {
     return false;
   }
 
-  /**
-   * Sender adds receiver by 6-digit code
-   */
   addReceiver(code) {
     return this.send('session.addReceiver', { code });
   }
 
-  /**
-   * Sender creates a broadcast code (multi-receiver)
-   */
   createBroadcastCode() {
     return this.send('session.createBroadcast', {});
   }
 
-  /**
-   * Sender regenerates a broadcast code (invalidates old code, keeps peers)
-   */
   regenerateBroadcast() {
     return this.send('session.regenerateBroadcast', {});
   }
 
-  /**
-   * Sender invalidates the broadcast code (e.g. when file list is modified)
-   */
   invalidateBroadcast() {
     return this.send('session.invalidateBroadcast', {});
   }
 
-  /**
-   * Receiver joins via sender's broadcast code
-   */
   joinBroadcast(code) {
     return this.send('receiver.joinCode', { code });
   }
 
-  /**
-   * Send WebRTC signal (SDP or ICE)
-   */
   sendSignal(type, to, payload) {
     return this.send(type, { to, payload });
   }
 
-  /**
-   * Sender removes receiver
-   */
   removeReceiver(receiverId) {
     return this.send('session.removeReceiver', { receiverId });
   }
 
-  /**
-   * Regenerate receiver code (RC-3)
-   */
   regenerateCode() {
     return this.send('receiver.regenerate', {});
   }
 
-  /**
-   * Sender ends session
-   */
   endSession() {
     this.send('session.end', {});
     this.close();
   }
 
-  /**
-   * Heartbeat handling (TRD 4.4)
-   */
   startHeartbeat() {
     this.stopHeartbeat();
     this.missedHeartbeats = 0;
@@ -388,9 +344,6 @@ export class SignalingClient {
     }
   }
 
-  /**
-   * Exponential backoff reconnect for sender (TRD 12)
-   */
   scheduleReconnect() {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       this.emit('error', { code: 'RECONNECT_FAILED', message: 'Failed to reconnect after maximum attempts' });
@@ -412,7 +365,7 @@ export class SignalingClient {
     try {
       ws.close();
     } catch {
-      // ignore
+      void 0;
     }
   }
 

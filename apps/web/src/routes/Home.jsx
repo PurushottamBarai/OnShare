@@ -85,7 +85,7 @@ export default function Home() {
 
   return (
     <div data-testid="route-dashboard" className="w-full flex flex-col items-center">
-      <section className="w-full px-4 sm:px-8 md:px-16 lg:px-28 py-8 sm:py-12 lg:py-14 flex flex-col lg:flex-row items-center justify-start lg:gap-14 xl:gap-20 2xl:gap-24">
+      <section className="w-full px-4 sm:px-8 md:px-16 lg:px-28 py-8 sm:py-12 lg:py-14 flex flex-col lg:flex-row items-center justify-start gap-10 sm:gap-12 lg:gap-14 xl:gap-20 2xl:gap-24">
         <div className="w-full max-w-[480px] flex flex-col gap-4 shrink-0 order-1 lg:order-1">
           <div className="flex bg-bg-surface/60 backdrop-blur-0 rounded-xl border border-gray-100 dark:border-border-subtle/30 shadow-[0_8px_32px_rgba(0,0,0,0.08)] overflow-hidden font-medium text-sm w-fit self-center">
             <Link 
@@ -275,7 +275,11 @@ export default function Home() {
           <details className="group bg-bg-surface border border-border-subtle rounded-2xl p-6 transition-all shadow-sm open:shadow-md">
             <summary className="font-semibold text-text-primary cursor-pointer list-none flex items-center justify-between text-base">
               <span>{t('landing.faq1Q', 'How does OnShare transfer files without cloud storage?')}</span>
-              <span className="text-accent-primary group-open:rotate-180 transition-transform">▼</span>
+              <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 ml-4 transition-all duration-200 text-text-secondary group-hover:text-text-primary bg-transparent group-hover:bg-black/5 group-open:bg-black/5 dark:group-hover:bg-white/10 dark:group-open:bg-white/10">
+                <svg className="w-4 h-4 transform transition-transform duration-200 group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </span>
             </summary>
             <p className="mt-3 text-sm text-text-secondary leading-relaxed">
               {t('landing.faq1A', 'OnShare uses WebRTC (Web Real-Time Communication), an open web standard supported natively by Chromium, Safari, Firefox, and Edge. When sender and receiver connect via a 6-digit pairing code, the signaling server only exchanges connection metadata (ICE candidates). The actual file bytes stream directly between the two browsers through an encrypted peer-to-peer data channel.')}
@@ -285,7 +289,11 @@ export default function Home() {
           <details className="group bg-bg-surface border border-border-subtle rounded-2xl p-6 transition-all shadow-sm open:shadow-md">
             <summary className="font-semibold text-text-primary cursor-pointer list-none flex items-center justify-between text-base">
               <span>{t('landing.faq2Q', 'Is there a file size limit on OnShare?')}</span>
-              <span className="text-accent-primary group-open:rotate-180 transition-transform">▼</span>
+              <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 ml-4 transition-all duration-200 text-text-secondary group-hover:text-text-primary bg-transparent group-hover:bg-black/5 group-open:bg-black/5 dark:group-hover:bg-white/10 dark:group-open:bg-white/10">
+                <svg className="w-4 h-4 transform transition-transform duration-200 group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </span>
             </summary>
             <p className="mt-3 text-sm text-text-secondary leading-relaxed">
               {t('landing.faq2A', 'OnShare supports transferring files up to 40 GB in Chromium-based browsers (Chrome, Edge, Brave, Opera) via the native File System Access API, which writes incoming chunks directly to disk instead of holding them in memory. In browsers where direct disk streaming is restricted, downloads fall back safely to in-memory Blob packaging for files up to available device memory.')}
@@ -295,7 +303,11 @@ export default function Home() {
           <details className="group bg-bg-surface border border-border-subtle rounded-2xl p-6 transition-all shadow-sm open:shadow-md">
             <summary className="font-semibold text-text-primary cursor-pointer list-none flex items-center justify-between text-base">
               <span>{t('landing.faq3Q', 'Are my files encrypted during transfer?')}</span>
-              <span className="text-accent-primary group-open:rotate-180 transition-transform">▼</span>
+              <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 ml-4 transition-all duration-200 text-text-secondary group-hover:text-text-primary bg-transparent group-hover:bg-black/5 group-open:bg-black/5 dark:group-hover:bg-white/10 dark:group-open:bg-white/10">
+                <svg className="w-4 h-4 transform transition-transform duration-200 group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </span>
             </summary>
             <p className="mt-3 text-sm text-text-secondary leading-relaxed">
               {t('landing.faq3A', 'Yes. All WebRTC peer connections are mandatory end-to-end encrypted using DTLS (Datagram Transport Layer Security) with AES-GCM 256-bit cryptography. No third party, internet service provider, or signaling node can inspect, intercept, or tamper with your files in transit.')}
@@ -305,7 +317,11 @@ export default function Home() {
           <details className="group bg-bg-surface border border-border-subtle rounded-2xl p-6 transition-all shadow-sm open:shadow-md">
             <summary className="font-semibold text-text-primary cursor-pointer list-none flex items-center justify-between text-base">
               <span>{t('landing.faq4Q', 'Can I transfer files between a phone and a computer?')}</span>
-              <span className="text-accent-primary group-open:rotate-180 transition-transform">▼</span>
+              <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 ml-4 transition-all duration-200 text-text-secondary group-hover:text-text-primary bg-transparent group-hover:bg-black/5 group-open:bg-black/5 dark:group-hover:bg-white/10 dark:group-open:bg-white/10">
+                <svg className="w-4 h-4 transform transition-transform duration-200 group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </span>
             </summary>
             <p className="mt-3 text-sm text-text-secondary leading-relaxed">
               {t('landing.faq4A', 'Yes! OnShare is 100% browser-based and platform agnostic. You can send files between Windows, macOS, Linux, Android, iOS, iPadOS, or ChromeOS simply by opening onshare.me on both devices and entering the 6-digit code.')}
@@ -315,7 +331,11 @@ export default function Home() {
           <details className="group bg-bg-surface border border-border-subtle rounded-2xl p-6 transition-all shadow-sm open:shadow-md">
             <summary className="font-semibold text-text-primary cursor-pointer list-none flex items-center justify-between text-base">
               <span>{t('landing.faq5Q', 'Do I need to keep the browser tab open while transferring?')}</span>
-              <span className="text-accent-primary group-open:rotate-180 transition-transform">▼</span>
+              <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 ml-4 transition-all duration-200 text-text-secondary group-hover:text-text-primary bg-transparent group-hover:bg-black/5 group-open:bg-black/5 dark:group-hover:bg-white/10 dark:group-open:bg-white/10">
+                <svg className="w-4 h-4 transform transition-transform duration-200 group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </span>
             </summary>
             <p className="mt-3 text-sm text-text-secondary leading-relaxed">
               {t('landing.faq5A', 'Yes. Because OnShare streams data directly from the sender’s browser to the receiver’s browser in real-time, both devices must keep their browser tabs open until the progress bar reaches 100%. Once completed, you can safely close the tabs.')}
@@ -325,7 +345,11 @@ export default function Home() {
           <details className="group bg-bg-surface border border-border-subtle rounded-2xl p-6 transition-all shadow-sm open:shadow-md">
             <summary className="font-semibold text-text-primary cursor-pointer list-none flex items-center justify-between text-base">
               <span>{t('landing.faq6Q', 'What happens if multiple files or folders are selected?')}</span>
-              <span className="text-accent-primary group-open:rotate-180 transition-transform">▼</span>
+              <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 ml-4 transition-all duration-200 text-text-secondary group-hover:text-text-primary bg-transparent group-hover:bg-black/5 group-open:bg-black/5 dark:group-hover:bg-white/10 dark:group-open:bg-white/10">
+                <svg className="w-4 h-4 transform transition-transform duration-200 group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </span>
             </summary>
             <p className="mt-3 text-sm text-text-secondary leading-relaxed">
               {t('landing.faq6A', 'When you select multiple files, OnShare automatically bundles and streams them as an uncompressed ZIP archive on the fly using fflate. The receiver receives a single organized .zip file with all folder hierarchies preserved.')}
@@ -335,7 +359,11 @@ export default function Home() {
           <details className="group bg-bg-surface border border-border-subtle rounded-2xl p-6 transition-all shadow-sm open:shadow-md">
             <summary className="font-semibold text-text-primary cursor-pointer list-none flex items-center justify-between text-base">
               <span>{t('landing.faq7Q', 'How does live collaborative text sharing work?')}</span>
-              <span className="text-accent-primary group-open:rotate-180 transition-transform">▼</span>
+              <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 ml-4 transition-all duration-200 text-text-secondary group-hover:text-text-primary bg-transparent group-hover:bg-black/5 group-open:bg-black/5 dark:group-hover:bg-white/10 dark:group-open:bg-white/10">
+                <svg className="w-4 h-4 transform transition-transform duration-200 group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </span>
             </summary>
             <p className="mt-3 text-sm text-text-secondary leading-relaxed">
               {t('landing.faq7A', 'Under the Text Live tab, OnShare provides a zero-install real-time scratchpad powered by Yjs Conflict-Free Replicated Data Types (CRDTs). You can share meeting notes, code snippets, links, and passwords directly across devices with live bidirectional character synchronization.')}

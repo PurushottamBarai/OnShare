@@ -8,7 +8,6 @@ export default function About() {
 
   return (
     <main data-testid="route-about" className="flex-1 flex flex-col w-full bg-bg-base">
-      {/* Top Banner with OnShare theme and subtle wave */}
       <div className="relative w-full bg-gradient-to-r from-accent-hover to-accent-primary py-20 sm:py-24 text-center">
         <h1 className="text-4xl sm:text-5xl font-bold text-bg-base tracking-wide">
           {t('aboutPage.title', 'About OnShare')}
@@ -29,7 +28,6 @@ export default function About() {
       </div>
 
       <div className="w-full max-w-4xl mx-auto px-6 py-14 sm:py-16 space-y-10 text-text-primary text-base sm:text-lg leading-relaxed">
-        {/* Mission Statement */}
         <section className="bg-bg-surface p-8 sm:p-10 rounded-2xl border border-border-subtle shadow-sm space-y-4">
           <h2 className="text-2xl sm:text-3xl font-bold text-text-primary">
             {t('aboutPage.missionTitle', 'Our Mission')}
@@ -42,7 +40,6 @@ export default function About() {
           </p>
         </section>
 
-        {/* Core Principles Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-bg-surface p-6 sm:p-8 rounded-2xl border border-border-subtle shadow-sm space-y-3">
             
@@ -97,7 +94,6 @@ export default function About() {
           </div>
         </div>
 
-        {/* Technology & Open Standards */}
         <section className="bg-bg-surface p-8 sm:p-10 rounded-2xl border border-border-subtle shadow-sm space-y-4">
           <h2 className="text-2xl font-bold text-text-primary">
             {t('aboutPage.techTitle', 'Built on Open Web Standards')}
@@ -110,7 +106,6 @@ export default function About() {
           </p>
         </section>
 
-        {/* Contact Callout */}
         <div className="p-6 sm:p-8 rounded-2xl bg-accent-primary/5 border border-accent-primary/20 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
             <h3 className="text-lg font-bold text-text-primary">

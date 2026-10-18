@@ -19,10 +19,11 @@ const DashboardText = forwardRef((props, ref) => {
   const [textLimitWarning, setTextLimitWarning] = useState(false);
   const [lockoutSeconds, setLockoutSeconds] = useState(0);
   const [deviceLabel] = useState(() => generateDeviceLabel().fullLabel);
-  const [mode, setMode] = useState('sender'); // 'sender' | 'receiver'
+  const [mode, setMode] = useState('sender');
   const [isBroadcast, setIsBroadcast] = useState(false);
   const [broadcastCode, setBroadcastCode] = useState(null);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedText, setCopiedText] = useState(false);
 
   const signalingRef = useRef(null);
   const peerManagersRef = useRef(new Map());
@@ -31,7 +32,6 @@ const DashboardText = forwardRef((props, ref) => {
 
   useImperativeHandle(ref, () => ({
     connectReceiverPeer: (pm) => {
-      // Destroy the sender session before switching to receiver mode
       if (textSessionRef.current) {
         textSessionRef.current.destroy();
         textSessionRef.current = null;
@@ -49,8 +49,8 @@ const DashboardText = forwardRef((props, ref) => {
   }));
 
   useEffect(() => {
-    if (mode === 'receiver') return; // Receiver session is managed by connectReceiverPeer
-    if (textSessionRef.current) return; // Already initialized
+    if (mode === 'receiver') return;
+    if (textSessionRef.current) return;
 
     const session = new TextSession({
       role: 'sender',
@@ -68,7 +68,6 @@ const DashboardText = forwardRef((props, ref) => {
     };
   }, [mode]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (textSessionRef.current) {
@@ -178,14 +177,9 @@ const DashboardText = forwardRef((props, ref) => {
     }
     setText(val);
     if (textSessionRef.current) textSessionRef.current.replaceText(val);
-    if (isBroadcast && broadcastCode) {
-      signalingRef.current?.invalidateBroadcast();
-      setBroadcastCode(null);
-    }
     if (mode === 'sender') ensureSession();
   };
 
-  // Auto-resize textarea up to max-height
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -204,8 +198,10 @@ const DashboardText = forwardRef((props, ref) => {
     if (!text) return;
     try {
       await navigator.clipboard.writeText(text);
+      setCopiedText(true);
+      setTimeout(() => setCopiedText(false), 2000);
     } catch {
-      /* ignore error */
+      void 0;
     }
   };
 
@@ -256,7 +252,6 @@ const DashboardText = forwardRef((props, ref) => {
           <span>{t('nav.textLive')}</span>
         </div>
 
-        {/* Broadcast Mode Toggle positioned between Text Live and Allow Edit */}
         {mode === 'sender' && (
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-text-secondary select-none">
@@ -295,8 +290,28 @@ const DashboardText = forwardRef((props, ref) => {
             />
             <span>Allow edit</span>
           </label>
-          <button onClick={handleCopyAll} title="Copy All" className="text-text-secondary hover:text-accent-primary transition-colors cursor-pointer">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+          <button
+            type="button"
+            onClick={handleCopyAll}
+            title={copiedText ? "Copied" : "Copy All"}
+            className={`flex items-center gap-1 transition-colors cursor-pointer text-xs font-semibold ${
+              copiedText
+                ? 'text-status-success'
+                : 'text-text-secondary hover:text-accent-primary'
+            }`}
+          >
+            {copiedText ? (
+              <>
+                <svg className="w-3.5 h-3.5 text-status-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="text-status-success">Copied</span>
+              </>
+            ) : (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            )}
           </button>
           <button onClick={handleDownloadTxt} title="Download .txt" className="text-text-secondary hover:text-accent-primary transition-colors cursor-pointer">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
@@ -347,7 +362,6 @@ const DashboardText = forwardRef((props, ref) => {
 
       {mode === 'sender' && (
         <div className="mt-auto flex flex-col w-full">
-          {/* If broadcast is toggled ON */}
           {isBroadcast ? (
             broadcastCode ? (
               <div className="flex items-center justify-between p-3 rounded-lg bg-bg-elevated border border-border-subtle">
@@ -372,14 +386,18 @@ const DashboardText = forwardRef((props, ref) => {
                     setCopiedCode(true);
                     setTimeout(() => setCopiedCode(false), 2000);
                   }}
-                  className="px-3 py-1.5 rounded bg-accent-primary hover:bg-accent-hover text-bg-base font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className={`px-3 py-1.5 rounded font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer ${
+                    copiedCode
+                      ? 'bg-status-success/15 border border-status-success/40 text-status-success'
+                      : 'bg-accent-primary hover:bg-accent-hover text-bg-base'
+                  }`}
                 >
                   {copiedCode ? (
                     <>
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="w-3.5 h-3.5 text-status-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
                       </svg>
-                      <span>Copied</span>
+                      <span className="text-status-success font-semibold">Copied</span>
                     </>
                   ) : (
                     <>

@@ -1,11 +1,6 @@
 import { decodeFrame } from './frame.js';
 import { sanitizeFilename } from './senderPipeline.js';
 
-/**
- * Receiver Sink (TRD Section 7.4)
- * Receives binary frames from WebRTC dataChannel and streams to disk
- * via File System Access API or Blob download fallback.
- */
 export class ReceiverSink {
   constructor({
     manifest,
@@ -32,14 +27,14 @@ export class ReceiverSink {
     this.writeQueue = Promise.resolve();
     this.pendingWriteBatch = [];
     this.pendingWriteBytes = 0;
-    this.MAX_WRITE_BATCH_BYTES = 1024 * 1024; // 1 MiB write batch to minimize disk syscalls
-    this.chunks = []; // Blob fallback chunks
+    this.MAX_WRITE_BATCH_BYTES = 1024 * 1024;
+    this.chunks = [];
     this.isCompleted = false;
     this.isCancelled = false;
     this.startTime = null;
     this.lastAckBytes = 0;
     this.lastProgressReportTime = 0;
-    this.PROGRESS_THROTTLE_MS = 200; // Throttle UI progress dispatches to 5 fps
+    this.PROGRESS_THROTTLE_MS = 200;
 
     this.bindDataChannel();
   }
@@ -81,10 +76,6 @@ export class ReceiverSink {
     return 'OnShare-Download';
   }
 
-  /**
-   * Request disk stream via File System Access API if supported (Chromium)
-   * Must be called during or immediately after user gesture (Accept click)
-   */
   async initFileSystemTarget() {
     if (typeof window !== 'undefined' && 'showSaveFilePicker' in window) {
       try {
@@ -95,7 +86,6 @@ export class ReceiverSink {
         this.writableStream = await handle.createWritable();
         return true;
       } catch {
-        // User cancelled picker or permission denied -> fallback to Blob download
         this.fileHandle = null;
         this.writableStream = null;
       }
@@ -140,7 +130,6 @@ export class ReceiverSink {
 
     this.reportProgress(isFinal);
 
-    // Send periodic progress ACK back to sender every 512 KiB
     if (this.totalBytesReceived - this.lastAckBytes >= 512 * 1024) {
       this.lastAckBytes = this.totalBytesReceived;
       if (this.controlChannel && this.controlChannel.readyState === 'open') {
@@ -150,7 +139,7 @@ export class ReceiverSink {
             bytesReceived: this.totalBytesReceived,
           }));
         } catch {
-          // ignore
+          void 0;
         }
       }
     }
@@ -187,17 +176,15 @@ export class ReceiverSink {
 
   async finishDownload() {
     this.isCompleted = true;
-    this.reportProgress(true); // Force final 100% progress update
+    this.reportProgress(true);
 
-    // Flush any pending write batch before closing stream
     this.flushWriteBatch();
 
-    // Await all queued chunk writes before closing the stream
     if (this.writeQueue) {
       try {
         await this.writeQueue;
       } catch {
-        // write errors handled in queue
+        void 0;
       }
     }
 
@@ -207,11 +194,10 @@ export class ReceiverSink {
       try {
         await this.writableStream.close();
       } catch {
-        // ignore
+        void 0;
       }
       this.writableStream = null;
     } else {
-      // Blob fallback: package chunks and trigger download
       const mimeType = this.isZip
         ? 'application/zip'
         : (this.manifest.files?.[0]?.type || 'application/octet-stream');
@@ -233,7 +219,6 @@ export class ReceiverSink {
       }
     }
 
-    // Acknowledge completion on control channel
     if (this.controlChannel && this.controlChannel.readyState === 'open') {
       try {
         this.controlChannel.send(JSON.stringify({
@@ -241,7 +226,7 @@ export class ReceiverSink {
           bytes: this.totalBytesReceived,
         }));
       } catch {
-        // ignore
+        void 0;
       }
     }
 
@@ -260,7 +245,7 @@ export class ReceiverSink {
     this.pendingWriteBytes = 0;
     this.writeQueue = Promise.resolve();
     if (this.writableStream) {
-      try { this.writableStream.abort(); } catch { /* ignore */ }
+      try { this.writableStream.abort(); } catch { void 0; }
       this.writableStream = null;
     }
     this.chunks = [];
@@ -268,7 +253,7 @@ export class ReceiverSink {
       try {
         this.controlChannel.send(JSON.stringify({ type: 'cancel' }));
       } catch {
-        // ignore
+        void 0;
       }
     }
   }

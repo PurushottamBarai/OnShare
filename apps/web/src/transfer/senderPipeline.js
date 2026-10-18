@@ -1,9 +1,6 @@
 import { Zip, ZipPassThrough } from 'fflate';
 import { encodeFrame, DEFAULT_CHUNK_SIZE } from './frame.js';
 
-/**
- * Generate standard zip filename: OnShare-YYYYMMDD-HHMM.zip (PRD FL-2)
- */
 export function generateZipFilename(d = new Date()) {
   const pad = (n) => String(n).padStart(2, '0');
   const YYYY = d.getFullYear();
@@ -14,19 +11,12 @@ export function generateZipFilename(d = new Date()) {
   return `OnShare-${YYYY}${MM}${DD}-${HH}${mm}.zip`;
 }
 
-/**
- * Sanitize filename by stripping path traversal and control characters
- */
 export function sanitizeFilename(name) {
-  // eslint-disable-next-line no-control-regex
-  let clean = (name || 'file').replace(/[\\/:*?"<>|\x00-\x1F]/g, '_').trim();
+  let clean = (name || 'file').replace(/[\\/:*?"<>|]/g, '_').split('').filter(ch => ch.charCodeAt(0) >= 32).join('').trim();
   if (!clean) clean = 'file';
   return clean;
 }
 
-/**
- * Deduplicate filenames (PRD FL-4)
- */
 function deduplicateFilenames(files) {
   const seen = new Map();
   return files.map(file => {
@@ -48,10 +38,6 @@ function deduplicateFilenames(files) {
   });
 }
 
-/**
- * Sender Pipeline (TRD Section 7.3)
- * Handles chunked streaming reads, backpressure, and streaming zip
- */
 export class SenderPipeline {
   constructor({ dataChannel, controlChannel, files, onProgress, onComplete, onError }) {
     this.dataChannel = dataChannel;
@@ -70,7 +56,7 @@ export class SenderPipeline {
     this.notifyAckReceived = null;
 
     this.lastProgressReportTime = 0;
-    this.PROGRESS_THROTTLE_MS = 200; // Throttle UI progress dispatches to 5 fps to free JS event loop
+    this.PROGRESS_THROTTLE_MS = 200;
 
     if (this.controlChannel) {
       this.handleControlMessage = (event) => {
@@ -84,14 +70,14 @@ export class SenderPipeline {
             }
           }
         } catch {
-          // ignore non-json or other control messages
+          void 0;
         }
       };
       this.controlChannel.addEventListener('message', this.handleControlMessage);
     }
 
     if (this.dataChannel) {
-      this.dataChannel.bufferedAmountLowThreshold = 2 * 1024 * 1024; // 2 MiB low-water mark
+      this.dataChannel.bufferedAmountLowThreshold = 2 * 1024 * 1024;
     }
   }
 
@@ -109,7 +95,7 @@ export class SenderPipeline {
         try {
           this.controlChannel.send(JSON.stringify({ type: 'cancel' }));
         } catch {
-          // ignore
+          void 0;
         }
       }
     }
@@ -134,7 +120,6 @@ export class SenderPipeline {
 
       this.dataChannel.addEventListener('bufferedamountlow', onLow);
 
-      // Fast-polling fallback every 15ms prevents edge-trigger deadlock
       timer = setInterval(() => {
         if (
           !this.dataChannel ||
@@ -151,7 +136,6 @@ export class SenderPipeline {
   async sendFrame(payload, offset, isFinal) {
     if (this.isCancelled) throw new Error('Transfer cancelled');
 
-    // Continuous saturation: drain only when kernel buffer exceeds 4 MiB
     if (this.dataChannel.bufferedAmount > 4 * 1024 * 1024) {
       await this.waitForBufferDrain();
     }
@@ -199,12 +183,11 @@ export class SenderPipeline {
       } else if (this.files.length > 1) {
         await this.streamMultiFileZip(this.files);
       } else {
-        // Zero files: send empty final frame
         await this.sendFrame(new Uint8Array(0), 0, true);
       }
 
       if (!this.isCancelled) {
-        this.reportProgress(true); // Force final 100% progress update
+        this.reportProgress(true);
         if (this.onComplete) {
           this.onComplete({ totalBytes: this.totalBytesSent });
         }
@@ -216,19 +199,15 @@ export class SenderPipeline {
     }
   }
 
-  /**
-   * Stream a single file unchanged using buffered 1 MiB reads and 64 KiB chunks
-   */
   async streamSingleFile(file) {
     const fileSize = file.size;
 
-    // Handle 0-byte file (FL-4)
     if (fileSize === 0) {
       await this.sendFrame(new Uint8Array(0), 0, true);
       return;
     }
 
-    const BLOCK_READ_SIZE = 1024 * 1024; // 1 MiB in-memory read buffer
+    const BLOCK_READ_SIZE = 1024 * 1024;
     let fileOffset = 0;
 
     while (fileOffset < fileSize) {
@@ -252,15 +231,11 @@ export class SenderPipeline {
     }
   }
 
-  /**
-   * Stream multiple files in a live fflate ZipPassThrough store-mode archive (PRD FL-2, TRD 7.3)
-   */
   async streamMultiFileZip(files) {
     const deduplicated = deduplicateFilenames(files);
     let currentOffset = 0;
     let zipError = null;
 
-    // We use a queue to send zip chunks to the data channel with backpressure
     const chunkQueue = [];
     let isZipFinished = false;
     let notifyChunkAvailable = null;
@@ -280,7 +255,6 @@ export class SenderPipeline {
       }
     });
 
-    // Worker promise: reads files and feeds them into zip entries sequentially
     const feedFilesPromise = (async () => {
       for (const item of deduplicated) {
         if (this.isCancelled || zipError) break;
@@ -308,7 +282,6 @@ export class SenderPipeline {
           entry.push(chunk, isFileFinal);
           fileOffset = end;
 
-          // If sender data channel is heavily backed up, yield briefly
           if (this.dataChannel.bufferedAmount > 512 * 1024) {
             await this.waitForBufferDrain();
           }
@@ -317,7 +290,6 @@ export class SenderPipeline {
       zip.end();
     })();
 
-    // Consumer loop: drains chunkQueue and sends frames over dataChannel
     while (!this.isCancelled) {
       if (zipError) throw zipError;
 

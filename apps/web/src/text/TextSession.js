@@ -1,43 +1,32 @@
 import * as Y from 'yjs';
 
-// Protocol tags for binary Yjs messages over WebRTC text channel
 const MSG_SYNC_STEP_1 = 1;
 const MSG_SYNC_STEP_2 = 2;
 const MSG_UPDATE = 3;
 
-export const MAX_TEXT_CHARACTERS = 500000; // 500,000 chars per PRD TX-5
+export const MAX_TEXT_CHARACTERS = 500000;
 
-/**
- * TextSession (TRD Section 8 & PRD Section 7.5)
- * Manages Yjs collaborative plain-text editing over WebRTC DataChannel in a star topology.
- */
 export class TextSession {
   constructor({ role, onTextChange, onPermissionChange }) {
-    this.role = role; // 'sender' (hub) | 'receiver'
+    this.role = role;
     this.ydoc = new Y.Doc();
     this.ytext = this.ydoc.getText('shared-text');
-    this.canEdit = role === 'sender'; // Sender can always edit; receivers edit when allowed
+    this.canEdit = role === 'sender';
     this.onTextChange = onTextChange;
     this.onPermissionChange = onPermissionChange;
 
-    // peerId -> { textChannel, controlChannel }
     this.peers = new Map();
 
-    // Listen to local / applied Yjs document text changes
     this.ytext.observe(() => {
       if (this.onTextChange) {
         this.onTextChange(this.ytext.toString());
       }
     });
 
-    // Listen to document updates to broadcast to peers
     this.ydoc.on('update', (update, origin) => {
-      // origin identifies who initiated the update
       if (this.role === 'sender') {
-        // Sender broadcasts update to all connected receivers except the origin
         this.broadcastUpdate(update, origin);
       } else if (origin === 'local') {
-        // Receiver sends update to sender hub if editing is allowed
         if (this.canEdit) {
           this.sendToSender(MSG_UPDATE, update);
         }
@@ -82,15 +71,11 @@ export class TextSession {
     }, 'local');
   }
 
-  /**
-   * Sender toggles receiver editing permission (PRD TX-2)
-   */
   setReceiverCanEdit(allowed) {
     if (this.role !== 'sender') return;
     this.canEdit = true;
     const canEdit = Boolean(allowed);
 
-    // Notify all connected receivers via control channel
     for (const peer of this.peers.values()) {
       if (peer.controlChannel?.readyState === 'open') {
         try {
@@ -99,15 +84,12 @@ export class TextSession {
             canEdit,
           }));
         } catch {
-          // ignore
+          void 0;
         }
       }
     }
   }
 
-  /**
-   * Register a connected peer's data channels
-   */
   addPeer(peerId, textChannel, controlChannel) {
     this.peers.set(peerId, { textChannel, controlChannel });
 
@@ -117,13 +99,12 @@ export class TextSession {
     };
 
     if (controlChannel) {
-      // Listen to control channel messages (like text.canEdit)
       const onMsg = (event) => {
         try {
           const data = JSON.parse(event.data);
           this.handleControlMessage(data);
         } catch {
-          // ignore
+          void 0;
         }
       };
       if (typeof controlChannel.addEventListener === 'function') {
@@ -135,13 +116,11 @@ export class TextSession {
 
     if (this.role === 'sender') {
       const sendInitialState = () => {
-        // Sender is hub: send current document state to newly joined receiver
         const fullState = Y.encodeStateAsUpdate(this.ydoc);
         if (fullState.byteLength > 0) {
           this.sendToPeer(peerId, MSG_SYNC_STEP_2, fullState);
         }
 
-        // Send initial edit permissions
         if (controlChannel?.readyState === 'open') {
           try {
             controlChannel.send(JSON.stringify({
@@ -149,7 +128,7 @@ export class TextSession {
               canEdit: this.canEdit,
             }));
           } catch {
-            // ignore
+            void 0;
           }
         }
       };
@@ -160,7 +139,6 @@ export class TextSession {
         textChannel.addEventListener('open', sendInitialState);
       }
     } else {
-      // Receiver connects: send state vector to hub to request missing diffs
       const sendInitialState = () => {
         const sv = Y.encodeStateVector(this.ydoc);
         this.sendToPeer(peerId, MSG_SYNC_STEP_1, sv);
@@ -186,11 +164,9 @@ export class TextSession {
 
     switch (msgType) {
       case MSG_SYNC_STEP_1: {
-        // Received remote state vector; respond with diff
         const diff = Y.encodeStateAsUpdate(this.ydoc, payload);
         this.sendToPeer(peerId, MSG_SYNC_STEP_2, diff);
         
-        // Also ensure the peer knows the current edit permissions
         if (this.role === 'sender') {
           const peer = this.peers.get(peerId);
           if (peer?.controlChannel?.readyState === 'open') {
@@ -200,7 +176,7 @@ export class TextSession {
                 canEdit: this.canEdit,
               }));
             } catch {
-              // ignore
+              void 0;
             }
           }
         }
@@ -208,23 +184,17 @@ export class TextSession {
       }
 
       case MSG_SYNC_STEP_2: {
-        // Received state diff; apply update
         Y.applyUpdate(this.ydoc, payload, peerId);
         break;
       }
 
       case MSG_UPDATE: {
-        // Incremental document edit update
         if (this.role === 'sender') {
-          // Sender checks if receiver editing is permitted
           if (!this.canEdit) {
-            // Edit toggle enforcement: ignore update
             return;
           }
-          // Apply update with receiver origin
           Y.applyUpdate(this.ydoc, payload, peerId);
         } else {
-          // Receiver applies hub update
           Y.applyUpdate(this.ydoc, payload, 'hub');
         }
         break;
@@ -241,7 +211,7 @@ export class TextSession {
       try {
         peer.textChannel.send(msg);
       } catch {
-        // ignore
+        void 0;
       }
     }
   }
@@ -255,7 +225,7 @@ export class TextSession {
         try {
           peer.textChannel.send(msg);
         } catch {
-          // ignore
+          void 0;
         }
       }
     }
@@ -270,7 +240,7 @@ export class TextSession {
         try {
           peer.textChannel.send(msg);
         } catch {
-          // ignore
+          void 0;
         }
         break;
       }

@@ -1,9 +1,5 @@
 import React from 'react';
 
-/**
- * Device Label Chip Component (UI Brief section 4.6, SN-10)
- * Displays auto-generated name + device / browser / OS indicators.
- */
 export default function DeviceLabelChip({
   name = 'Swift Otter',
   browser = 'Chrome',
