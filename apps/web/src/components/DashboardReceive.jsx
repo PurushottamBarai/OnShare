@@ -26,6 +26,7 @@ export default function DashboardReceive({ onTextSessionActive }) {
   const [joinError, setJoinError] = useState(null);
   const [isJoining, setIsJoining] = useState(false);
   const isJoiningRef = useRef(false);
+  const joinTimeoutRef = useRef(null);
 
   const signalingRef = useRef(null);
   const peerManagerRef = useRef(null);
@@ -80,6 +81,10 @@ export default function DashboardReceive({ onTextSessionActive }) {
     });
 
     client.on('receiver.matched', (payload) => {
+      if (joinTimeoutRef.current) {
+        clearTimeout(joinTimeoutRef.current);
+        joinTimeoutRef.current = null;
+      }
       setIsJoining(false);
       isJoiningRef.current = false;
       setJoinError(null);
@@ -122,6 +127,10 @@ export default function DashboardReceive({ onTextSessionActive }) {
     });
 
     client.on('error', (payload) => {
+      if (joinTimeoutRef.current) {
+        clearTimeout(joinTimeoutRef.current);
+        joinTimeoutRef.current = null;
+      }
       if (isJoiningRef.current) {
         setIsJoining(false);
         isJoiningRef.current = false;
@@ -136,6 +145,10 @@ export default function DashboardReceive({ onTextSessionActive }) {
   };
 
   const cleanup = () => {
+    if (joinTimeoutRef.current) {
+      clearTimeout(joinTimeoutRef.current);
+      joinTimeoutRef.current = null;
+    }
     receiverSinkRef.current?.cancel();
     receiverSinkRef.current = null;
     peerManagerRef.current?.close();
@@ -175,14 +188,27 @@ export default function DashboardReceive({ onTextSessionActive }) {
 
   const handleJoinBroadcast = (e) => {
     e.preventDefault();
-    if (!joinCode || joinCode.length !== 6 || isJoining) return;
+    const cleanCode = joinCode.replace(/\D/g, '');
+    if (cleanCode.length !== 6 || isJoining) return;
     setJoinError(null);
     setIsJoining(true);
     isJoiningRef.current = true;
+
+    if (joinTimeoutRef.current) {
+      clearTimeout(joinTimeoutRef.current);
+    }
+    joinTimeoutRef.current = setTimeout(() => {
+      if (isJoiningRef.current) {
+        setIsJoining(false);
+        isJoiningRef.current = false;
+        setJoinError('Connecting timed out. Please check the code and ensure the sender is active.');
+      }
+    }, 10000);
+
     if (!signalingRef.current) {
       initReceiver();
     }
-    signalingRef.current?.joinBroadcast(joinCode);
+    signalingRef.current?.joinBroadcast(cleanCode);
   };
 
   const handleAccept = async () => {
@@ -297,10 +323,13 @@ export default function DashboardReceive({ onTextSessionActive }) {
               <div className="flex w-full">
                 <input
                   type="text"
-                  maxLength={6}
+                  maxLength={8}
                   value={joinCode}
                   onChange={(e) => {
-                    setJoinCode(e.target.value.replace(/\D/g, ''));
+                    const clean = e.target.value.replace(/[^\d\s-]/g, '');
+                    if (clean.replace(/\D/g, '').length <= 6) {
+                      setJoinCode(clean);
+                    }
                     setJoinError(null);
                   }}
                   placeholder="Enter the code"
@@ -310,14 +339,27 @@ export default function DashboardReceive({ onTextSessionActive }) {
                 <button
                   type="submit"
                   aria-label={t('dashboard.receiveBtn', 'Receive')}
-                  disabled={joinCode.length !== 6 || isJoining}
+                  disabled={joinCode.replace(/\D/g, '').length !== 6 || isJoining}
                   className="px-4 py-2.5 rounded-r border border-l-0 border-accent-primary bg-accent-primary hover:bg-accent-hover disabled:opacity-50 text-bg-base font-semibold text-xs flex items-center justify-center transition-colors cursor-pointer"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
+                  {isJoining ? (
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                  )}
                 </button>
               </div>
+              {isJoining && (
+                <p className="text-xs text-accent-primary mt-2 flex items-center gap-1.5 animate-pulse">
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent-primary inline-block" />
+                  Connecting to sender...
+                </p>
+              )}
               {joinError && <p className="text-xs text-status-error mt-1.5 text-center">{joinError}</p>}
             </form>
           </div>

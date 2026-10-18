@@ -9,9 +9,9 @@
   ],
   "scripts": {
     "start": "node apps/signaling/src/server.js",
+    "dev": "concurrently -n \"signaling,web\" -c \"cyan,magenta\" \"npm run dev:signaling\" \"npm run dev:web\"",
     "dev:web": "npm run --workspace=@onshare/web dev",
     "dev:signaling": "npm run --workspace=@onshare/signaling dev",
-    "dev:signaling:node": "node apps/signaling/src/server.js",
     "build": "npm run --workspaces --if-present build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -23,6 +23,7 @@
     "@playwright/test": "^1.47.2",
     "@testing-library/react": "^14.3.1",
     "@vitejs/plugin-react": "^6.1.1",
+    "concurrently": "^10.0.6",
     "eslint": "^9.11.1",
     "eslint-plugin-react": "^7.36.1",
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
