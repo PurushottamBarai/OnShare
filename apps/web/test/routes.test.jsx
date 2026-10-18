@@ -1,10 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import App from '../src/App.jsx';
 
 describe('App Route Shells', () => {
+  beforeAll(() => {
+    window.scrollTo = () => {};
+  });
+
   const routes = [
     { path: '/' },
     { path: '/send' },

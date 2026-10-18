@@ -83,6 +83,12 @@ export default function Home() {
     }
   };
 
+  const scrollToTop = () => {
+    if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   return (
     <div data-testid="route-dashboard" className="w-full flex flex-col items-center">
       <section className="w-full px-4 sm:px-8 md:px-16 lg:px-28 py-8 sm:py-12 lg:py-14 flex flex-col lg:flex-row items-center justify-start gap-10 sm:gap-12 lg:gap-14 xl:gap-20 2xl:gap-24">
@@ -90,18 +96,21 @@ export default function Home() {
           <div className="flex bg-bg-surface/60 backdrop-blur-0 rounded-xl border border-gray-100 dark:border-border-subtle/30 shadow-[0_8px_32px_rgba(0,0,0,0.08)] overflow-hidden font-medium text-sm w-fit self-center">
             <Link 
               to="/send"
+              onClick={scrollToTop}
               className={`px-6 py-2.5 transition-all duration-300 cursor-pointer ${activeTab === 'send' ? 'bg-accent-primary text-bg-base font-semibold shadow-md scale-105 rounded-xl' : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated/40'}`}
             >
               {t('nav.send')}
             </Link>
             <Link 
               to="/receive"
+              onClick={scrollToTop}
               className={`px-6 py-2.5 transition-all duration-300 cursor-pointer ${activeTab === 'receive' ? 'bg-accent-primary text-bg-base font-semibold shadow-md scale-105 rounded-xl' : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated/40'}`}
             >
               {t('nav.receive')}
             </Link>
             <Link 
               to="/text"
+              onClick={scrollToTop}
               className={`px-6 py-2.5 transition-all duration-300 cursor-pointer ${activeTab === 'text' ? 'bg-accent-primary text-bg-base font-semibold shadow-md scale-105 rounded-xl' : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated/40'}`}
             >
               {t('nav.textLive')}

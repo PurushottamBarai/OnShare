@@ -82,6 +82,10 @@ export default function App() {
     setIsMobileMenuOpen(false);
     setIsLangMenuOpen(false);
 
+    if (typeof window !== "undefined" && typeof window.scrollTo === "function") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
     const seo = getRouteSEO(location.pathname);
     document.title = seo.title;
 
@@ -217,6 +221,12 @@ export default function App() {
     }
   };
 
+  const scrollToTop = () => {
+    if (typeof window !== "undefined" && typeof window.scrollTo === "function") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   const isDashboardRoute = ["/", "/send", "/receive", "/text"].includes(location.pathname);
 
   return (
@@ -224,6 +234,7 @@ export default function App() {
       <header className="border-b border-border-subtle bg-bg-surface px-4 sm:px-8 md:px-16 lg:px-28 py-3.5 flex items-center justify-between sticky top-0 z-30 shadow-sm">
         <Link
           to="/"
+          onClick={scrollToTop}
           className="flex items-center gap-2 text-x font-bold text-accent-primary hover:opacity-95"
         >
           <img
@@ -239,30 +250,35 @@ export default function App() {
           >
             <Link
               to="/send"
+              onClick={scrollToTop}
               className={`transition-colors ${location.pathname === "/send" || location.pathname === "/" ? "text-accent-primary font-semibold" : "text-text-secondary hover:text-text-primary"}`}
             >
               {t("nav.send")}
             </Link>
             <Link
               to="/receive"
+              onClick={scrollToTop}
               className={`transition-colors ${location.pathname === "/receive" ? "text-accent-primary font-semibold" : "text-text-secondary hover:text-text-primary"}`}
             >
               {t("nav.receive")}
             </Link>
             <Link
               to="/text"
+              onClick={scrollToTop}
               className={`transition-colors ${location.pathname === "/text" ? "text-accent-primary font-semibold" : "text-text-secondary hover:text-text-primary"}`}
             >
               {t("nav.textLive")}
             </Link>
             <Link
               to="/about"
+              onClick={scrollToTop}
               className={`transition-colors ${location.pathname === "/about" ? "text-accent-primary font-semibold" : "text-text-secondary hover:text-text-primary"}`}
             >
               {t("nav.about", "About")}
             </Link>
             <Link
               to="/contact"
+              onClick={scrollToTop}
               className={`transition-colors ${location.pathname === "/contact" ? "text-accent-primary font-semibold" : "text-text-secondary hover:text-text-primary"}`}
             >
               {t("nav.contact")}
@@ -429,22 +445,22 @@ export default function App() {
             <span className="block sm:inline mt-0.5 sm:mt-0">{t("footer.tagline")}</span>
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4 text-xs">
-            <Link to="/about" className="hover:text-text-primary">
+            <Link to="/about" onClick={scrollToTop} className="hover:text-text-primary">
               {t("footer.about", "About Us")}
             </Link>
-            <Link to="/how-it-works" className="hover:text-text-primary">
+            <Link to="/how-it-works" onClick={scrollToTop} className="hover:text-text-primary">
               {t("footer.howItWorks")}
             </Link>
-            <Link to="/privacy" className="hover:text-text-primary">
+            <Link to="/privacy" onClick={scrollToTop} className="hover:text-text-primary">
               {t("footer.privacyPolicy")}
             </Link>
-            <Link to="/terms" className="hover:text-text-primary">
+            <Link to="/terms" onClick={scrollToTop} className="hover:text-text-primary">
               {t("footer.termsOfUse")}
             </Link>
-            <Link to="/contact" className="hover:text-text-primary">
+            <Link to="/contact" onClick={scrollToTop} className="hover:text-text-primary">
               {t("footer.contact")}
             </Link>
-            <Link to="/feedback" className="hover:text-text-primary">
+            <Link to="/feedback" onClick={scrollToTop} className="hover:text-text-primary">
               {t("footer.feedback")}
             </Link>
           </div>
