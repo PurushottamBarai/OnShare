@@ -130,6 +130,7 @@ export default function DashboardSend() {
 
           setReceivers(prev => prev.map(r => {
             if (r.id !== receiverId) return r;
+            if (r.status === 'done' && state !== 'DONE') return r;
             if (state === 'WAITING_ACCEPT') return { ...r, status: 'waiting' };
             if (state === 'ACCEPTED') return { ...r, status: 'sending', progress: 0, speedBps: 0, bytesSent: 0, totalSize: manifest.totalSize };
             if (state === 'DECLINED') return { ...r, status: 'declined' };
@@ -152,7 +153,11 @@ export default function DashboardSend() {
     });
 
     client.on('peer.left', (payload) => {
-      setReceivers(prev => prev.map(r => r.id === payload.peerId ? { ...r, status: 'declined' } : r));
+      setReceivers(prev => prev.map(r => {
+        if (r.id !== payload.peerId) return r;
+        if (r.status === 'done') return r;
+        return { ...r, status: 'declined' };
+      }));
     });
 
     client.on('error', (payload) => {

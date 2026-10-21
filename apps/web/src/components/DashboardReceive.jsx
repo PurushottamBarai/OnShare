@@ -114,8 +114,12 @@ export default function DashboardReceive({ onTextSessionActive }) {
         },
         onControlMessage: () => {},
         onStateChange: (state) => {
+          const current = receiverStateRef.current;
+          if (current === 'DONE' || current === 'DECLINED' || current === 'TEXT_ACTIVE') {
+            return;
+          }
           if (state === 'DECLINED') setReceiverState('DECLINED');
-          if (state === 'FAILED' || state === 'CLOSED') {
+          if (state === 'FAILED') {
             setReceiverState('FAILED');
             setErrorMessage('Connection was interrupted or closed by the sender. Please try again.');
           }
@@ -161,8 +165,11 @@ export default function DashboardReceive({ onTextSessionActive }) {
     }
     receiverSinkRef.current?.cancel();
     receiverSinkRef.current = null;
-    peerManagerRef.current?.close();
-    peerManagerRef.current = null;
+    if (peerManagerRef.current) {
+      peerManagerRef.current.onStateChange = null;
+      peerManagerRef.current.close();
+      peerManagerRef.current = null;
+    }
     signalingRef.current?.close();
     signalingRef.current = null;
   };

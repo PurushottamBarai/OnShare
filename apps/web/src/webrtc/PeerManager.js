@@ -49,6 +49,7 @@ export class PeerManager {
   }
 
   setState(newState, details = null) {
+    if (this.isClosing) return;
     this.state = newState;
     if (this.onStateChange) {
       this.onStateChange(newState, details);
@@ -74,12 +75,13 @@ export class PeerManager {
     };
 
     this.pc.onconnectionstatechange = () => {
+      if (this.isClosing) return;
       if (this.pc.connectionState === 'failed') {
         this.setState('FAILED');
       } else if (this.pc.connectionState === 'disconnected') {
         if (this.disconnectTimeout) clearTimeout(this.disconnectTimeout);
         this.disconnectTimeout = setTimeout(() => {
-          if (this.pc?.connectionState === 'disconnected') {
+          if (!this.isClosing && this.pc?.connectionState === 'disconnected') {
             this.setState('FAILED');
           }
         }, 5000);
@@ -275,7 +277,7 @@ export class PeerManager {
     };
 
     channel.onclose = () => {
-      if (this.state !== 'DECLINED' && this.state !== 'ACCEPTED' && this.state !== 'DONE') {
+      if (!this.isClosing && this.state !== 'DECLINED' && this.state !== 'ACCEPTED' && this.state !== 'DONE') {
         this.setState('CLOSED');
       }
     };
@@ -348,6 +350,7 @@ export class PeerManager {
   }
 
   close() {
+    this.isClosing = true;
     if (this.manifestRetryTimer) {
       clearInterval(this.manifestRetryTimer);
       this.manifestRetryTimer = null;
@@ -363,6 +366,10 @@ export class PeerManager {
     if (typeof window !== 'undefined' && window.__activePeerManagers) {
       window.__activePeerManagers.delete(this);
     }
+    this.onStateChange = null;
+    this.onControlMessage = null;
+    this.onChannelsReady = null;
+    this.onManifest = null;
     if (this.controlChannel) {
       try { this.controlChannel.close(); } catch { void 0; }
       this.controlChannel = null;
@@ -379,6 +386,6 @@ export class PeerManager {
       try { this.pc.close(); } catch { void 0; }
       this.pc = null;
     }
-    this.setState('CLOSED');
+    this.state = 'CLOSED';
   }
 }
