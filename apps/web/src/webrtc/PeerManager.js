@@ -49,7 +49,7 @@ export class PeerManager {
   }
 
   setState(newState, details = null) {
-    if (this.isClosing) return;
+    if (this.isClosing || (this.state === 'DONE' && newState !== 'DONE')) return;
     this.state = newState;
     if (this.onStateChange) {
       this.onStateChange(newState, details);

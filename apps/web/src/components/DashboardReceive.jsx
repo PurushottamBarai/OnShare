@@ -33,17 +33,18 @@ export default function DashboardReceive({ onTextSessionActive }) {
   const receiverSinkRef = useRef(null);
   const receiverStateRef = useRef(receiverState);
 
+  const updateReceiverState = (newState) => {
+    receiverStateRef.current = newState;
+    setReceiverState(newState);
+  };
+
   useEffect(() => {
     receiverStateRef.current = receiverState;
   }, [receiverState]);
 
-  const initReceiver = (forceNew = false, keepState = null) => {
+  const initReceiver = (forceNew = false) => {
     cleanup();
-    if (keepState) {
-      setReceiverState(keepState);
-    } else {
-      setReceiverState('CONNECTING');
-    }
+    updateReceiverState('CONNECTING');
     setErrorMessage(null);
     setManifest(null);
     setTransferProgress({ percent: 0, bytesReceived: 0, totalSize: 0, speedBps: 0, timeRemainingSec: 0 });
@@ -70,9 +71,7 @@ export default function DashboardReceive({ onTextSessionActive }) {
 
     client.on('receiver.created', (payload) => {
       setCode(payload.code);
-      if (!keepState) {
-        setReceiverState('WAITING');
-      }
+      updateReceiverState('WAITING');
       try {
         if (typeof window !== 'undefined' && window.sessionStorage) {
           sessionStorage.setItem('onshare_receiver_code', JSON.stringify({
@@ -93,7 +92,7 @@ export default function DashboardReceive({ onTextSessionActive }) {
       setIsJoining(false);
       isJoiningRef.current = false;
       setJoinError(null);
-      setReceiverState('MATCHED');
+      updateReceiverState('MATCHED');
 
       peerManagerRef.current = new PeerManager({
         peerId: 'sender',
@@ -104,12 +103,12 @@ export default function DashboardReceive({ onTextSessionActive }) {
           setManifest(manifestData);
           if (manifestData?.mode === 'text') {
             peerManagerRef.current?.acceptTransfer();
-            setReceiverState('TEXT_ACTIVE');
+            updateReceiverState('TEXT_ACTIVE');
             if (onTextSessionActive) {
               onTextSessionActive(peerManagerRef.current);
             }
           } else {
-            setReceiverState('AWAITING_ACCEPT');
+            updateReceiverState('AWAITING_ACCEPT');
           }
         },
         onControlMessage: () => {},
@@ -118,9 +117,9 @@ export default function DashboardReceive({ onTextSessionActive }) {
           if (current === 'DONE' || current === 'DECLINED' || current === 'TEXT_ACTIVE') {
             return;
           }
-          if (state === 'DECLINED') setReceiverState('DECLINED');
+          if (state === 'DECLINED') updateReceiverState('DECLINED');
           if (state === 'FAILED') {
-            setReceiverState('FAILED');
+            updateReceiverState('FAILED');
             setErrorMessage('Connection was interrupted or closed by the sender. Please try again.');
           }
         },
@@ -135,7 +134,7 @@ export default function DashboardReceive({ onTextSessionActive }) {
     client.on('session.closed', (payload) => {
       const current = receiverStateRef.current;
       if (current !== 'DONE' && current !== 'DECLINED' && current !== 'TEXT_ACTIVE' && current !== 'TRANSFERRING') {
-        setReceiverState('FAILED');
+        updateReceiverState('FAILED');
         setErrorMessage(payload.reason === 'sender_ended' ? 'Sender ended the session.' : 'Sender disconnected.');
       }
     });
@@ -151,7 +150,7 @@ export default function DashboardReceive({ onTextSessionActive }) {
         setJoinError(payload.message || 'Invalid or expired code');
         return;
       }
-      setReceiverState('FAILED');
+      updateReceiverState('FAILED');
       setErrorMessage(payload.message || 'An error occurred.');
     });
 
@@ -237,7 +236,7 @@ export default function DashboardReceive({ onTextSessionActive }) {
 
     if (manifest?.mode === 'text') {
       peerManagerRef.current.acceptTransfer();
-      setReceiverState('TEXT_ACTIVE');
+      updateReceiverState('TEXT_ACTIVE');
 
       const pm = peerManagerRef.current;
       const notifyTextSession = () => {
@@ -271,7 +270,7 @@ export default function DashboardReceive({ onTextSessionActive }) {
           setTransferStatus({ isActive: true, role: 'receiver', progress: p.percent });
         },
         onComplete: () => {
-          setReceiverState('DONE');
+          updateReceiverState('DONE');
           setTransferStatus({ isActive: false, role: 'receiver', progress: 100 });
           try {
             if (typeof window !== 'undefined' && window.sessionStorage) {
@@ -280,10 +279,14 @@ export default function DashboardReceive({ onTextSessionActive }) {
           } catch {
             void 0;
           }
-          initReceiver(true, 'DONE');
+          if (peerManagerRef.current) {
+            peerManagerRef.current.onStateChange = null;
+            peerManagerRef.current.close();
+            peerManagerRef.current = null;
+          }
         },
         onError: (err) => {
-          setReceiverState('FAILED');
+          updateReceiverState('FAILED');
           setTransferStatus({ isActive: false, role: 'receiver' });
           setErrorMessage(err.message || 'File transfer failed');
         },
@@ -292,7 +295,7 @@ export default function DashboardReceive({ onTextSessionActive }) {
 
       sink.initFileSystemTarget().then(() => {
         pm.acceptTransfer();
-        setReceiverState('TRANSFERRING');
+        updateReceiverState('TRANSFERRING');
       });
     };
 
@@ -311,7 +314,7 @@ export default function DashboardReceive({ onTextSessionActive }) {
 
   const handleDecline = () => {
     peerManagerRef.current?.declineTransfer();
-    setReceiverState('DECLINED');
+    updateReceiverState('DECLINED');
   };
 
   return (
@@ -531,7 +534,7 @@ export default function DashboardReceive({ onTextSessionActive }) {
               <svg className="w-5 h-5 text-status-success" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
               <span className="text-sm font-medium text-status-success">Transfer Complete</span>
             </div>
-            <button onClick={() => setReceiverState('WAITING')} className="text-xs px-3 py-1 rounded bg-bg-surface border border-border-subtle hover:border-accent-primary transition-colors cursor-pointer">
+            <button onClick={() => initReceiver(true)} className="text-xs px-3 py-1 rounded bg-bg-surface border border-border-subtle hover:border-accent-primary transition-colors cursor-pointer">
               Reset
             </button>
           </div>

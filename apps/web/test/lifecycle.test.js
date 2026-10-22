@@ -84,4 +84,26 @@ describe('WebRTC Teardown & Completion Lifecycle', () => {
     expect(receivers[0].status).toBe('done');
     expect(receivers[0].progress).toBe(100);
   });
+
+  it('preserves PeerManager DONE state and ignores subsequent FAILED or CLOSED transitions', () => {
+    const onStateChange = vi.fn();
+    const pm = new PeerManager({
+      peerId: 'peer-2',
+      role: 'receiver',
+      onStateChange,
+    });
+
+    pm.setState('DONE');
+    expect(pm.state).toBe('DONE');
+    expect(onStateChange).toHaveBeenCalledWith('DONE', null);
+
+    // Any subsequent state change to FAILED or CLOSED should be ignored
+    pm.setState('FAILED', 'late error');
+    expect(pm.state).toBe('DONE');
+    expect(onStateChange).toHaveBeenCalledTimes(1);
+
+    pm.setState('CLOSED');
+    expect(pm.state).toBe('DONE');
+    expect(onStateChange).toHaveBeenCalledTimes(1);
+  });
 });
