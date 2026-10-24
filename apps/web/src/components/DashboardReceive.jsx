@@ -101,15 +101,7 @@ export default function DashboardReceive({ onTextSessionActive }) {
         signalingClient: client,
         onManifest: (manifestData) => {
           setManifest(manifestData);
-          if (manifestData?.mode === 'text') {
-            peerManagerRef.current?.acceptTransfer();
-            updateReceiverState('TEXT_ACTIVE');
-            if (onTextSessionActive) {
-              onTextSessionActive(peerManagerRef.current);
-            }
-          } else {
-            updateReceiverState('AWAITING_ACCEPT');
-          }
+          updateReceiverState('AWAITING_ACCEPT');
         },
         onControlMessage: () => {},
         onStateChange: (state) => {
@@ -463,13 +455,16 @@ export default function DashboardReceive({ onTextSessionActive }) {
         {receiverState === 'AWAITING_ACCEPT' && (
           manifest ? (
             <div className="w-full p-4 rounded-lg bg-bg-surface border border-border-subtle shadow-sm flex flex-col gap-3">
-              <div className="flex items-center justify-center py-1">
+              <div className="flex flex-col items-center justify-center py-1 gap-0.5">
                 {manifest.mode === 'text' ? (
-                  <p className="text-base font-semibold text-text-primary tracking-wide">Text Session</p>
+                  <p className="text-base font-semibold text-text-primary tracking-wide">Live Text Session</p>
                 ) : (
                   <p className="text-base font-semibold text-text-primary tracking-wide">
                     {manifest.files?.length || 0} file{(manifest.files?.length || 0) !== 1 ? 's' : ''} • {formatBytes(manifest.totalSize)}
                   </p>
+                )}
+                {manifest.senderLabel && (
+                  <p className="text-xs text-text-secondary">{manifest.senderLabel}</p>
                 )}
               </div>
               {manifest.totalSize > 2 * 1024 * 1024 * 1024 && !(typeof window !== 'undefined' && 'showSaveFilePicker' in window) && (
