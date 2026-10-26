@@ -430,9 +430,10 @@ export default function DashboardReceive({ onTextSessionActive }) {
         <div className="flex-1">
         {receiverState === 'MATCHED' && (
           <div className="w-full p-6 rounded-xl bg-bg-surface border border-border-subtle shadow-sm flex flex-col items-center justify-center space-y-3.5 text-center">
-            <div className="relative flex items-center justify-center">
-              <div className="w-10 h-10 rounded-full border-2 border-accent-primary/20 border-t-accent-primary animate-spin" />
-              <div className="absolute w-4 h-4 rounded-full bg-accent-primary animate-pulse" />
+            <div className="relative flex items-center justify-center w-12 h-12">
+              <span className="absolute w-12 h-12 rounded-full bg-slate-400/20 dark:bg-slate-400/15 animate-ping" />
+              <span className="absolute w-8 h-8 rounded-full bg-slate-400/30 dark:bg-slate-400/25 animate-pulse" />
+              <span className="relative w-4 h-4 rounded-full bg-slate-500 dark:bg-slate-400 shadow-[0_0_12px_rgba(100,116,139,0.5)] dark:shadow-[0_0_12px_rgba(148,163,184,0.5)]" />
             </div>
             <div>
               <p className="text-sm font-semibold text-text-primary">
