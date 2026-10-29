@@ -1,6 +1,5 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import AdSlot from '../components/AdSlot.jsx';
 
 export default function Terms() {
   const { t } = useTranslation();
@@ -53,8 +52,6 @@ export default function Terms() {
             <p>{t('termsPage.p4')}</p>
           </section>
         </div>
-
-        <AdSlot height="100px" className="mt-8" />
       </div>
     </main>
   );

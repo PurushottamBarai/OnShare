@@ -80,7 +80,90 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   </head>
   <body class="bg-bg-base text-text-primary min-h-screen font-sans antialiased">
-    <div id="root"></div>
+    <div id="root">
+      <!-- Semantic Static Fallback for Search Engines, Accessibility, and AdSense Reviewers -->
+      <main style="max-width: 960px; margin: 0 auto; padding: 40px 20px; font-family: Inter, system-ui, -apple-system, sans-serif; color: #2A2438; line-height: 1.6;">
+        <header style="text-align: center; margin-bottom: 40px;">
+          <h1 style="font-size: 2.25rem; font-weight: 700; margin-bottom: 12px; color: #2A2438;">
+            OnShare – Direct P2P Browser File &amp; Live Text Sharing
+          </h1>
+          <p style="font-size: 1.125rem; color: #5C5470; max-width: 720px; margin: 0 auto;">
+            Fast, secure, and private peer-to-peer file transfers and real-time collaborative text editing directly between browsers using encrypted WebRTC DataChannels. Zero account registration, zero cloud storage, and unlimited peer speed.
+          </p>
+        </header>
+
+        <section style="margin-bottom: 36px; padding: 24px; background: #F5F4F8; border-radius: 16px; border: 1px solid #DBD8E3;">
+          <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 12px; color: #2A2438;">
+            Step-by-Step Video Guide
+          </h2>
+          <p style="margin-bottom: 14px; color: #5C5470;">
+            Watch our official video tutorial to learn how to pair devices with 6-digit OTP codes, transfer files of any size without cloud uploads, and collaborate with live synchronized text:
+          </p>
+          <p>
+            <a href="https://youtu.be/q4J69bw37ok" target="_blank" rel="noopener noreferrer" style="display: inline-block; padding: 10px 20px; background: #5C5470; color: #FFFFFF; text-decoration: none; border-radius: 8px; font-weight: 600;">
+              Watch the Video Tutorial on YouTube &rarr;
+            </a>
+          </p>
+        </section>
+
+        <section style="margin-bottom: 36px;">
+          <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 16px; color: #2A2438;">
+            How OnShare Works
+          </h2>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px;">
+            <div style="padding: 20px; background: #F5F4F8; border-radius: 12px; border: 1px solid #DBD8E3;">
+              <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 8px; color: #2A2438;">1. Select Content</h3>
+              <p style="font-size: 0.95rem; color: #5C5470;">Choose any file, folder, or type live text directly in the browser notepad. No upload limits or compression.</p>
+            </div>
+            <div style="padding: 20px; background: #F5F4F8; border-radius: 12px; border: 1px solid #DBD8E3;">
+              <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 8px; color: #2A2438;">2. Pair Securely</h3>
+              <p style="font-size: 0.95rem; color: #5C5470;">Connect sender and receiver using an ephemeral 6-digit OTP code in either Direct Mode or 1-to-many Broadcast Mode.</p>
+            </div>
+            <div style="padding: 20px; background: #F5F4F8; border-radius: 12px; border: 1px solid #DBD8E3;">
+              <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 8px; color: #2A2438;">3. Instant P2P Stream</h3>
+              <p style="font-size: 0.95rem; color: #5C5470;">Data streams directly between browsers via DTLS/SCTP encryption without ever storing a single byte on third-party servers.</p>
+            </div>
+          </div>
+        </section>
+
+        <section style="margin-bottom: 36px; padding: 24px; background: #F5F4F8; border-radius: 16px; border: 1px solid #DBD8E3;">
+          <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 14px; color: #2A2438;">
+            Key Capabilities &amp; Architecture
+          </h2>
+          <ul style="padding-left: 20px; color: #5C5470; line-height: 1.8;">
+            <li><strong>Direct-to-Disk Streaming up to 40 GB:</strong> Streams chunks directly into persistent storage via the Chromium File System Access API, preventing browser memory exhaustion.</li>
+            <li><strong>Dual Transfer Modes:</strong> Direct Mode with sender-gated reversed OTP (up to 10 receivers) and Broadcast Mode with forward OTP (up to 50 receivers).</li>
+            <li><strong>Real-Time Live Notepad:</strong> Collaborative conflict-free editing powered by Yjs CRDTs directly across browsers.</li>
+            <li><strong>End-to-End Encryption:</strong> All transfers protected by DTLS/SCTP ciphers; servers only broker ephemeral SDP signaling.</li>
+            <li><strong>Global Accessibility:</strong> Fully localized in 30 languages with native Right-to-Left (RTL) Arabic layout.</li>
+          </ul>
+        </section>
+
+        <section style="margin-bottom: 36px;">
+          <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 16px; color: #2A2438;">
+            Frequently Asked Questions (FAQ)
+          </h2>
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div style="padding: 16px 20px; background: #F5F4F8; border-radius: 12px; border: 1px solid #DBD8E3;">
+              <h3 style="font-size: 1.05rem; font-weight: 600; margin-bottom: 6px; color: #2A2438;">Are my files stored on your servers?</h3>
+              <p style="font-size: 0.95rem; color: #5C5470;">Never. Files, file names, and shared text travel directly between connected peers. OnShare does not operate storage servers, databases, or cloud drives.</p>
+            </div>
+            <div style="padding: 16px 20px; background: #F5F4F8; border-radius: 12px; border: 1px solid #DBD8E3;">
+              <h3 style="font-size: 1.05rem; font-weight: 600; margin-bottom: 6px; color: #2A2438;">What is the maximum file size?</h3>
+              <p style="font-size: 0.95rem; color: #5C5470;">On modern desktop browsers with File System Access API support, you can transfer files up to 40 GB. On mobile browsers, memory buffering supports files up to 2 GB.</p>
+            </div>
+            <div style="padding: 16px 20px; background: #F5F4F8; border-radius: 12px; border: 1px solid #DBD8E3;">
+              <h3 style="font-size: 1.05rem; font-weight: 600; margin-bottom: 6px; color: #2A2438;">Do I need to sign up or install any software?</h3>
+              <p style="font-size: 0.95rem; color: #5C5470;">No. OnShare works entirely in the web browser on all major platforms (Android, iOS, Windows, macOS, Linux) without registration or software downloads.</p>
+            </div>
+          </div>
+        </section>
+
+        <footer style="text-align: center; padding-top: 20px; border-top: 1px solid #DBD8E3; font-size: 0.875rem; color: #5C5470;">
+          <p>&copy; 2026 OnShare &bull; Direct Peer-to-Peer Browser Sharing &bull; <a href="https://onshare.me" style="color: #5C5470; text-decoration: underline;">onshare.me</a></p>
+        </footer>
+      </main>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

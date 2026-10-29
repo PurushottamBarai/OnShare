@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import AdSlot from '../components/AdSlot.jsx';
 
 export default function Feedback() {
   const { t } = useTranslation();
@@ -162,8 +161,6 @@ export default function Feedback() {
             </form>
           </div>
         )}
-
-        <AdSlot height="100px" className="mt-8" />
       </div>
     </main>
   );
