@@ -134,7 +134,7 @@ export default function Home() {
             </div>
           </div>
 
-          <AdSlot height="90px" className="w-full mt-2" />
+          <AdSlot className="w-full mt-2" />
         </div>
 
         <div className="w-full lg:flex-1 flex flex-col items-center lg:items-start text-center lg:text-left space-y-6 max-w-xl xl:max-w-2xl self-center order-2 lg:order-2 py-2">
