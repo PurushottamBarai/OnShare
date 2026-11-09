@@ -187,3 +187,10 @@ button {
 .animate-cursor-blink {
   animation: cursor-blink 0.8s ease-in-out infinite;
 }
+
+@media (max-width: 768px) {
+  body > div:not(#root) {
+    top: auto !important;
+    bottom: 12px !important;
+  }
+}
