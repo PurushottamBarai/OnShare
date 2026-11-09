@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import DashboardSend from '../components/DashboardSend.jsx';
 import DashboardReceive from '../components/DashboardReceive.jsx';
 import DashboardText from '../components/DashboardText.jsx';
+import AdSlot from '../components/AdSlot.jsx';
 
 function useTypewriter(phrases, { typingSpeed = 75, deletingSpeed = 35, pauseTime = 2200, pauseBeforeNext = 350 } = {}) {
   const [displayText, setDisplayText] = useState(phrases[0] || '');
@@ -132,6 +133,8 @@ export default function Home() {
               </div>
             </div>
           </div>
+
+          <AdSlot height="90px" className="w-full mt-2" />
         </div>
 
         <div className="w-full lg:flex-1 flex flex-col items-center lg:items-start text-center lg:text-left space-y-6 max-w-xl xl:max-w-2xl self-center order-2 lg:order-2 py-2">
