@@ -1,32 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 
 export default function AdSlot({ className = '' }) {
-  const containerRef = useRef(null);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    containerRef.current.innerHTML = '';
-
-    const confScript = document.createElement('script');
-    confScript.type = 'text/javascript';
-    confScript.text = `
-      atOptions = {
-        'key' : 'd5470d15981d62ce4586cbb96f11ed01',
-        'format' : 'iframe',
-        'height' : 250,
-        'width' : 300,
-        'params' : {}
-      };
-    `;
-
-    const adScript = document.createElement('script');
-    adScript.type = 'text/javascript';
-    adScript.src = 'https://bauval.org/22/d5470d15981d62ce4586cbb96f11ed01';
-
-    containerRef.current.appendChild(confScript);
-    containerRef.current.appendChild(adScript);
-  }, []);
+  const adHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>* { margin: 0; padding: 0; } body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; background: transparent; }</style></head><body><script type="text/javascript">atOptions = { 'key' : 'd5470d15981d62ce4586cbb96f11ed01', 'format' : 'iframe', 'height' : 250, 'width' : 300, 'params' : {} };</script><script type="text/javascript" src="https://bauval.org/22/d5470d15981d62ce4586cbb96f11ed01"></script></body></html>`;
 
   return (
     <div
@@ -34,10 +9,13 @@ export default function AdSlot({ className = '' }) {
       className={`w-full flex items-center justify-center overflow-hidden my-4 ${className}`}
       aria-label="Advertisement"
     >
-      <div
-        ref={containerRef}
-        style={{ width: '300px', height: '250px', minWidth: '300px', minHeight: '250px' }}
-        className="flex items-center justify-center overflow-hidden rounded-xl"
+      <iframe
+        title="Advertisement"
+        srcDoc={adHtml}
+        width="300"
+        height="250"
+        style={{ border: 'none', width: '300px', height: '250px', overflow: 'hidden' }}
+        scrolling="no"
       />
     </div>
   );
