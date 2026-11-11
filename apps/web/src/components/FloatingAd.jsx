@@ -83,8 +83,8 @@ export default function FloatingAd() {
       className="fixed bottom-4 right-4 z-20 hidden lg:block"
       aria-label="Advertisement"
     >
-      <div className="relative w-[320px] rounded-2xl border border-border-subtle bg-bg-surface shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-3 py-2 border-b border-border-subtle">
+      <div className="flex w-[300px] flex-col items-center gap-1 bg-transparent">
+        <div className="flex w-full items-center justify-between">
           <span className="text-[10px] uppercase tracking-wider text-text-secondary">
             Advertisement
           </span>
@@ -92,7 +92,7 @@ export default function FloatingAd() {
             type="button"
             onClick={dismiss}
             aria-label="Close advertisement"
-            className="w-6 h-6 flex items-center justify-center rounded-full text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
+            className="w-6 h-6 flex items-center justify-center rounded-full text-text-secondary hover:text-text-primary transition-colors"
           >
             <svg
               className="w-3.5 h-3.5"
@@ -110,8 +110,8 @@ export default function FloatingAd() {
           </button>
         </div>
         <div
-          className="flex items-center justify-center bg-bg-base/40"
-          style={{ height: 250 }}
+          className="flex items-center justify-center bg-transparent"
+          style={{ width: 300, height: 250 }}
         >
           <iframe
             title="Advertisement"

@@ -239,7 +239,7 @@ export default function App() {
   };
 
   const isDashboardRoute = ["/", "/send", "/receive", "/text"].includes(location.pathname);
-  const showFloatingAd = AD_ROUTES.has(location.pathname);
+  const showFloatingAd = AD_ROUTES.has(location.pathname) && location.pathname !== "/";
 
   return (
     <div className="min-h-screen flex flex-col bg-bg-base text-text-primary transition-colors duration-150">
