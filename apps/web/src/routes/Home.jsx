@@ -92,7 +92,11 @@ export default function Home() {
 
   return (
     <div data-testid="route-dashboard" className="w-full flex flex-col items-center">
-      <section className="w-full px-4 sm:px-8 md:px-16 lg:px-28 py-8 sm:py-12 lg:py-14 flex flex-col lg:flex-row items-center justify-start gap-10 sm:gap-12 lg:gap-14 xl:gap-20 2xl:gap-24">
+      <section className="relative w-full px-4 sm:px-8 md:px-16 lg:px-28 py-8 sm:py-12 lg:py-14 flex flex-col lg:flex-row items-center justify-start gap-10 sm:gap-12 lg:gap-14 xl:gap-20 2xl:gap-24">
+        <div className="hidden min-[1700px]:block absolute top-4 right-4 w-[300px]">
+          <AdSlot />
+        </div>
+
         <div className="w-full max-w-[480px] flex flex-col gap-4 shrink-0 order-1 lg:order-1">
           <div className="flex bg-bg-surface/60 backdrop-blur-0 rounded-xl border border-gray-100 dark:border-border-subtle/30 shadow-[0_8px_32px_rgba(0,0,0,0.08)] overflow-hidden font-medium text-sm w-fit self-center">
             <Link 
@@ -133,8 +137,6 @@ export default function Home() {
               </div>
             </div>
           </div>
-
-          <AdSlot className="w-full mt-2" />
         </div>
 
         <div className="w-full lg:flex-1 flex flex-col items-center lg:items-start text-center lg:text-left space-y-6 max-w-xl xl:max-w-2xl self-center order-2 lg:order-2 py-2">
@@ -158,6 +160,17 @@ export default function Home() {
           <p className="text-base sm:text-lg text-text-secondary leading-relaxed">
             {t('landing.heroDesc', 'Transfer files of any size directly between smartphones, tablets, and computers using end-to-end encrypted WebRTC. No registration, no app downloads, and zero intermediate server storage.')}
           </p>
+        </div>
+      </section>
+
+      <section className="w-full border-y border-border-subtle bg-bg-surface/40 px-4 sm:px-6 lg:px-8 py-5">
+        <div className="max-w-5xl mx-auto flex justify-center">
+          <div className="hidden lg:flex justify-center">
+            <AdSlot format="728x90" />
+          </div>
+          <div className="flex lg:hidden justify-center">
+            <AdSlot format="320x50" />
+          </div>
         </div>
       </section>
 

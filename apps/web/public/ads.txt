@@ -1,1 +1,1 @@
-google.com, pub-7296843155272709, DIRECT, f08c47fec0942fa0
+# Adsterra does not require an ads.txt file. No seller entries are needed.

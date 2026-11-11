@@ -48,6 +48,17 @@ const ComponentsShowcase = lazy(
   () => import("./routes/ComponentsShowcase.jsx"),
 );
 import { getTransferStatus } from "./utils/transferState.js";
+import FloatingAd from "./components/FloatingAd.jsx";
+import ConsentBanner from "./components/ConsentBanner.jsx";
+
+const AD_ROUTES = new Set([
+  "/",
+  "/about",
+  "/about-us",
+  "/how-it-works",
+  "/contact",
+  "/feedback",
+]);
 
 function LoadingFallback() {
   return (
@@ -228,6 +239,7 @@ export default function App() {
   };
 
   const isDashboardRoute = ["/", "/send", "/receive", "/text"].includes(location.pathname);
+  const showFloatingAd = AD_ROUTES.has(location.pathname);
 
   return (
     <div className="min-h-screen flex flex-col bg-bg-base text-text-primary transition-colors duration-150">
@@ -466,6 +478,9 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {showFloatingAd && <FloatingAd />}
+      {showFloatingAd && <ConsentBanner />}
     </div>
   );
 }

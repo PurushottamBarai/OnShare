@@ -207,7 +207,7 @@ export default function HowItWorks() {
           </div>
         </div>
 
-        <AdSlot height="100px" className="mt-8" />
+        <AdSlot className="mt-8" />
       </div>
     </main>
   );

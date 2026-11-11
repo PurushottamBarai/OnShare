@@ -74,7 +74,7 @@ export default function ComponentsShowcase() {
           Neutral frame distinct from bg.elevated with &quot;Advertisement&quot; label, strictly preserving layout stability.
         </p>
 
-        <AdSlot height="100px" />
+        <AdSlot />
       </section>
     </div>
   );
